@@ -1,0 +1,47 @@
+\chapter{Conclusiones y propuesta}
+\label{cap:conclusiones}
+
+\section{Conclusiones}
+
+\begin{enumerate}
+  \item La reproducción local de las mejores soluciones públicas de IEEE-CIS Fraud Detection es
+        viable en hardware de consumidor (16 núcleos, RTX 2060 de 6\,GB) y entrega resultados
+        cualitativamente idénticos a los de la competencia: el ordenamiento por AUC se conserva.
+  \item El experimento de ablación demuestra que el rendimiento excepcional de la solución
+        ganadora no proviene del algoritmo (idéntico en ambas variantes) ni del hardware, sino
+        de la \textbf{ingeniería de variables orientada a entidades}: reconstruir el cliente
+        implícito (\emph{magic UID}) y agregar su historial aporta $+0{,}0104$ de AUC local,
+        más que cualquier cambio de modelo estudiado.
+  \item La \textbf{estabilización temporal} de variables (normalización de columnas \texttt{D},
+        filtrado por consistencia temporal) y la \textbf{validación temporal honesta}
+        (\texttt{GroupKFold} mensual) son condiciones habilitantes: sin ellas, las ganancias no
+        se transferirían al mes de prueba.
+  \item El hardware acelera 4.4$\times$ el ciclo de experimentación sin mover el AUC: su valor es
+        de productividad, no de precisión.
+  \item Las técnicas de re-muestreo (SMOTE) presentes en el corpus analítico no forman parte de
+        las soluciones ganadoras: con árboles y AUC, el desbalance se maneja vía objetivos
+        probabilísticos y \texttt{scale\_pos\_weight}.
+\end{enumerate}
+
+\section{Propuesta de desarrollo}
+\label{sec:futuro}
+
+Sobre la evidencia recogida, la propuesta consiste en construir el pipeline siguiente, en orden
+de retorno esperado:
+
+\begin{enumerate}
+  \item \textbf{Base}: XGBoost/LightGBM con las familias \texttt{C/D/V} seleccionadas por
+        correlación y columnas \texttt{D} normalizadas (componentes ya verificados).
+  \item \textbf{Entidades causales}: implementar el magic UID con agregaciones
+        \emph{estrictamente históricas} (cada transacción usa solo estadísticas de
+        transacciones anteriores a su \texttt{TransactionDT}), eliminando el carácter
+        transductivo detectado en el protocolo original.
+  \item \textbf{Ensemble}: combinar por promedio de rangos el XGB de entidades con un LightGBM
+        equivalente ---el camino seguido por el equipo ganador (0{,}9459 en el tablero
+        privado)--- y añadir el post-procesado de suavizado por UID.
+  \item \textbf{Evaluación de negocio}: incorporar umbral de decisión y curva de utilidad
+        (costo de bloqueo vs.\ pérdida por fraude) junto al AUC.
+\end{enumerate}
+
+Con ello, el proyecto transita de \emph{reproducir} las mejores técnicas públicas a
+\emph{producir} una solución propia, superando la limitación metodológica principal detectada.

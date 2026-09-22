@@ -1,0 +1,119 @@
+\chapter{Conjunto de datos}
+\label{cap:datos}
+
+\section{Origen y estructura}
+
+Los datos provienen de transacciones reales de comercio electrónico provistas por Vesta
+Corporation. Se componen de dos tablas unidas por \texttt{TransactionID}
+(\cref{tab:datos}): una tabla de \emph{transacción} (590\,540 filas $\times$ 394 columnas en
+entrenamiento) y una tabla de \emph{identidad} (144\,233 filas $\times$ 40 columnas), disponible
+solo para el $\sim$24\,\% de las transacciones.
+
+\begin{table}[ht]
+  \centering
+  \caption{Resumen de los archivos del conjunto de datos.}
+  \label{tab:datos}
+  \input{\tabdir tabla_datos}
+\end{table}
+
+Las variables se agrupan en familias semánticas:
+
+\begin{itemize}
+  \item \textbf{Montos y producto}: \texttt{TransactionAmt}, \texttt{ProductCD} (W, C, R, H, S).
+  \item \textbf{Tarjeta}: \texttt{card1}--\texttt{card6} (emisor, tipo, categoría).
+  \item \textbf{Geografía}: \texttt{addr1}--\texttt{addr2}, \texttt{dist1}--\texttt{dist2}.
+  \item \textbf{Correo}: \texttt{P\_emaildomain}, \texttt{R\_emaildomain}.
+  \item \textbf{Conteos} \texttt{C1}--\texttt{C14}: cuántos elementos asociados (tarjetas,
+        direcciones, correos) aparecen en la ventana de observación.
+  \item \textbf{Deltas de tiempo} \texttt{D1}--\texttt{D15}: días transcurridos desde un evento
+        previo (p.\,ej.\ primera transacción, cambio de tarjeta).
+  \item \textbf{Coincidencias} \texttt{M1}--\texttt{M9}: variables booleanas de matching.
+  \item \textbf{\texttt{V1}--\texttt{V339}}: variables propietarias de Vesta (rangos, conteos,
+        hashes), con bloques fuertemente correlacionados.
+  \item \textbf{Identidad} \texttt{id\_01}--\texttt{id\_38}, \texttt{DeviceType},
+        \texttt{DeviceInfo}: huella de dispositivo y de red.
+\end{itemize}
+
+\section{Desbalance del problema}
+
+De las 590\,540 transacciones de entrenamiento, 20\,663 son fraudulentas: un 3{,}50\,\%
+(razón de desbalance 1:27, \cref{fig:target}). Esta proporción hace que la exactitud
+(\emph{accuracy}) sea una métrica inútil ---un clasificador trivial que predice ``legítima''
+alcanza 96{,}5\,\% de exactitud con utilidad nula---, por lo que la competencia adoptó el
+área bajo la curva ROC (AUC) como métrica oficial, que ordena transacciones en lugar de
+etiquetarlas con umbral fijo.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.62\textwidth]{\figdir fig_distribucion_target.pdf}
+  \caption{Distribución de la variable objetivo. El desbalance 1:27 exige métricas de orden
+           (AUC) y hace innecesario el re-muestreo agresivo para modelos de árboles.}
+  \label{fig:target}
+\end{figure}
+
+\section{Calidad de los datos}
+
+Dos problemas dominan la calidad de los datos. Primero, los \textbf{valores faltantes}: la
+familia \texttt{V} promedia un 43\,\% de faltantes y la tabla de identidad, al fusionarse por
+completitud izquierda, introduce un 76\,\% de faltantes estructurales en sus columnas
+(\cref{fig:nulos}). Segundo, la \textbf{cola pesada} del monto (\cref{fig:amt}), que en escala
+lineal concentra el 99\,\% de la masa por debajo de \$300 mientras la cola llega a \$31\,937:
+los montos extremos son justamente sospechosos, por lo que no deben recortarse sino
+re-escalarse (logaritmo) o dejarse en bruto para los árboles.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.85\textwidth]{\figdir fig_nulos_por_grupo.pdf}
+  \caption{Porcentaje promedio de valores faltantes por familia de variables. La ausencia de la
+           tabla de identidad es estructural (transacciones sin huella de dispositivo) y, como se
+           verá, codificar la ausencia como categoría propia (-999) es preferible a imputar.}
+  \label{fig:nulos}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.85\textwidth]{\figdir fig_amt_distribucion.pdf}
+  \caption{Distribución del monto por clase en escala logarítmica. Las transacciones fraudulentas
+           se concentran en montos bajos-repetitivos, con una cola superior más densa que la de
+           las legítimas.}
+  \label{fig:amt}
+\end{figure}
+
+\section{La estructura temporal: la dificultad central}
+
+\texttt{TransactionDT} es un desplazamiento relativo en segundos (693\,999--1\,581\,113\,131)
+que cubre 182 días de entrenamiento. La partición oficial de la competencia es
+\textbf{temporal}: el conjunto de prueba corresponde al mes siguiente al final del
+entrenamiento. Esto tiene tres consecuencias metodológicas:
+
+\begin{enumerate}
+  \item Una validación aleatoria (KFold clásico) \emph{sobreestima} el desempeño: filas
+        ``del futuro'' aparecen en el entrenamiento de cada fold.
+  \item Cualquier variable cuya distribución derive con el tiempo produce una relación espuria
+        con el target (\cref{fig:fraude-temporal} y \cref{sec:dcols}).
+  \item La validación honesta debe simular el futuro: \emph{holdout} por corte temporal,
+        \texttt{TimeSeriesSplit}, o \texttt{GroupKFold} agrupando por mes calendario.
+\end{enumerate}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.95\textwidth]{\figdir fig_fraude_temporal.pdf}
+  \caption{Tasa diaria de fraude durante los 182 días de entrenamiento. Los picos agudos
+           corresponden a campañas de ataque acotadas en el tiempo: el patrón no es estacionario,
+           y por eso la selección de variables por \emph{consistencia temporal}
+           (\cref{sec:timeconsistency}) resulta decisiva.}
+  \label{fig:fraude-temporal}
+\end{figure}
+
+Como referencia de mercado, \cref{fig:leaderboard} muestra la distribución de puntajes del
+tablero público (6\,355 equipos): la masa de competidores se concentra bajo 0{,}95 y el top-5
+supera 0{,}966, lo que ilustra el diferencial que aportan las técnicas que este informe estudia.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.9\textwidth]{\figdir fig_leaderboard.pdf}
+  \caption{Histograma del tablero público de la competencia. En rojo, los cinco primeros
+           equipos: AlKo (0{,}9681), FraudSquad (0{,}9677), Young for you (0{,}9676),
+           2 uncles and 3 puppies (0{,}9672) y Mr Lonely (0{,}9663).}
+  \label{fig:leaderboard}
+\end{figure}

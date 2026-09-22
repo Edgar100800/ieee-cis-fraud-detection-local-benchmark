@@ -1,0 +1,90 @@
+\documentclass[11pt,a4paper]{report}
+
+% ------------------------------------------------------------------
+% Informe: IEEE-CIS Fraud Detection — ingeniería de datos y modelos
+% Compilación: tectonic main.tex  (o xelatex main.tex ×2)
+% ------------------------------------------------------------------
+\usepackage[spanish,es-tabla]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage[colorlinks=true,linkcolor=blue!60!black,citecolor=green!40!black,urlcolor=blue!60!black]{hyperref}
+\usepackage[nameinlink,capitalize]{cleveref}
+
+% --- listings estilo Python ---
+\definecolor{codebg}{RGB}{248,248,248}
+\definecolor{codekey}{RGB}{0,92,197}
+\definecolor{codestr}{RGB}{163,21,21}
+\lstdefinestyle{py}{
+  language=Python,
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  keywordstyle=\color{codekey}\bfseries,
+  stringstyle=\color{codestr},
+  commentstyle=\color{gray}\itshape,
+  showstringspaces=false,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{gray!40},
+  columns=fullflexible,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ñ}{{\~n}}1
+}
+\lstset{style=py}
+
+% --- accesos rápidos ---
+\newcommand{\figdir}{figures/}
+\newcommand{\tabdir}{tables/}
+
+\title{\textbf{Ingeniería de datos y modelos de clasificación para\\ detección de fraude en transacciones}\\[6pt]
+\large Estudio comparativo sobre la competencia IEEE-CIS Fraud Detection\\
+\large Proyecto 1 — Planificación}
+\author{Edgar Chambilla}
+\date{Septiembre de 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Este informe documenta la reproducción local y el análisis comparativo de las mejores soluciones
+públicas de la competencia \emph{IEEE-CIS Fraud Detection} (Kaggle, 2019), con el objetivo de
+identificar qué técnicas de tratamiento de datos y qué modelos de clasificación explican el
+rendimiento observado. Se seleccionaron los 12 notebooks públicos con mayor reputación, se
+descargaron sus fuentes y se ejecutaron localmente 4 de ellos (los que producen modelos
+entrenables) sobre el conjunto completo de datos, bajo validación temporal que replica la
+separación train/test de la competencia. El resultado central es una \emph{ablación} controlada:
+con exactamente el mismo modelo (XGBoost, profundidad 12), la construcción de un pseudo-identificador
+de cliente (\emph{magic UID}) y sus $\sim$40 agregaciones por grupo elevan el AUC local de
+0{,}9375 a 0{,}9479 ($+0{,}0104$), mientras que los cambios de algoritmo o de hardware apenas
+movilizan el AUC. Se concluye que, en problemas con distribución temporal no estacionaria,
+la jerarquía de impacto es: (1)~validación honesta, (2)~ingeniería de features orientada a
+entidades, (3)~estabilización temporal de features, y (4)~recién entonces, hiperparámetros y
+arquitectura del modelo. Todos los experimentos son reproducibles con los scripts incluidos.
+\end{abstract}
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+\input{chapters/introduccion}
+\input{chapters/datos}
+\input{chapters/tratamiento}
+\input{chapters/modelos}
+\input{chapters/resultados}
+\input{chapters/discusion}
+\input{chapters/conclusiones}
+
+\appendix
+\input{chapters/apendice}
+
+\bibliographystyle{plain}
+\bibliography{referencias}
+
+\end{document}

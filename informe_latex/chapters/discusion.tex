@@ -1,0 +1,86 @@
+\chapter{Discusión}
+\label{cap:discusion}
+
+\section{Ventajas y límites de cada método}
+
+\begin{table}[ht]
+  \centering
+  \caption{Ventajas y limitaciones observadas en la reproducción local.}
+  \label{tab:ventajas}
+  \small
+  \begin{tabular}{p{0.30\textwidth}p{0.32\textwidth}p{0.30\textwidth}}
+    \toprule
+    Método & Ventaja principal & Límite principal \\
+    \midrule
+    Baseline XGBoost CPU &
+      Mínimo costo de desarrollo; piso de referencia inmediato ($\sim$0.92). &
+      Features crudas desperdician la señal de entidad; 112\,s por ajuste frena la iteración. \\
+    \addlinespace
+    Baseline XGBoost GPU &
+      4.4$\times$ más rápido con AUC idéntico; habilita búsqueda de hiperparámetros. &
+      No aporta precisión por sí solo; exige VRAM suficiente. \\
+    \addlinespace
+    LightGBM + RFE + count encoding (nroman) &
+      30\,\% menos features con AUC equivalente; validación temporal estricta; interpretable. &
+      Ganancia de precisión marginal; la tasa de aprendizaje 0.0069 exige miles de árboles. \\
+    \addlinespace
+    XGBoost d12 + magic UID (cdeotte) &
+      Mayor AUC local (0.9479); ganancia atribuible y replicable ($+0.0104$). &
+      Requiere conocimiento del dominio (composición del UID); agregaciones costosas; protocolo
+      transductivo (ver \cref{sec:limites}). \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Qué importa realmente: jerarquía de impacto}
+
+Los experimentos permiten ordenar los factores por su contribución al AUC:
+
+\begin{enumerate}
+  \item \textbf{Validación honesta} (no aporta AUC, evita ilusiones): el esquema de validación
+        decide si un resultado es real. KFold aleatorio habría reportado valores notablemente
+        superiores e irrepetibles en producción.
+  \item \textbf{Ingeniería de entidades} ($+0{,}028$ acumulado): el pseudo-cliente y sus
+        agregaciones explican la mayor parte de la distancia entre el baseline y el tope local.
+        La lección es transferible a cualquier dominio con entidades implícitas (usuarios,
+        dispositivos, comercios): \emph{construir la entidad, agregar su historial, descartar la
+        llave}.
+  \item \textbf{Estabilización temporal} (habilitadora): normalizar columnas \texttt{D} y filtrar
+        por consistencia temporal no sube el AUC por sí sola, pero hace que las ganancias
+        anteriores \emph{se transfieran} al futuro.
+  \item \textbf{Selección de variables} ($\approx$neutral aquí): recortar de 432 a 120 variables
+        mantuvo el AUC con menos costo, relevante en producción.
+  \item \textbf{Algoritmo e hiperparámetros} (menor): entre XGBoost y LightGBM la diferencia
+        observada es inferior al efecto de cualquier técnica de datos; la optimización bayesiana
+        de nroman vale menos que una sola feature de entidad bien construida.
+  \item \textbf{Hardware} ($0$ AUC, $\times$4.4 velocidad): la GPU acelera el ciclo de
+        experimentación, que es donde se generan las ganancias de datos.
+\end{enumerate}
+
+\section{Limitaciones metodológicas}
+\label{sec:limites}
+
+\begin{enumerate}
+  \item \textbf{Protocolo transductivo}: las agregaciones por UID se computan sobre todo el
+        período de entrenamiento, incluidos los meses usados como validación (sin usar sus
+        etiquetas). El AUC local absoluto es, por tanto, un límite superior respecto de un
+        sistema causal estricto. La variante estricta (estadísticas solo con transacciones
+        anteriores a cada transacción) es el siguiente hito propuesto.
+  \item \textbf{Un solo grano de validación para los XGB d12}: GroupKFold de 3 meses (6 en el
+        original) por restricciones de tiempo de GPU; las diferencias entre folds fueron
+        pequeñas y consistentes en dirección.
+  \item \textbf{Corpus no ejecutado}: 8 notebooks de alto valor analítico (EDA, re-muestreo,
+        optimización bayesiana completa, \emph{blend} de artgor, RAPIDS de Deotte) se analizaron
+        cualitativamente pero no se reprodujeron numéricamente; sus conclusiones no cuentan con
+        medición local.
+  \item \textbf{Métrica única}: el AUC ordena bien pero no responde por costos asimétricos de
+        negocio (falso positivo bloquea un pago legítimo); un despliegue real requiere umbral y
+        métrica de utilidad propios.
+\end{enumerate}
+
+\section{Amenazas a la validez}
+
+Las adaptaciones de librerías (XGBoost $\ge$2, LightGBM $\ge$4, pandas~3) alteran detalles de
+desempate y de parada temprana respecto de 2019; se priorizó preservar la \emph{lógica} de cada
+pipeline sobre la igualdad bit a bit. Las diferencias con los puntajes históricos de Kaggle son
+esperadas y se documentan en \cref{cap:resultados}; ninguna cambia la conclusión comparativa.

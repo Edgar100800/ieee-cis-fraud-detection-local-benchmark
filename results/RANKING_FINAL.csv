@@ -1,0 +1,6 @@
+ranking,notebook,modelo,auc,tiempo_s,validacion,notas
+5,inversion/ieee-simple-xgboost (baseline),XGBoost CPU d9 x500,0.9190839078396292,111.73662614822388,holdout temporal 75/25,"432 features raw, fillna(-999)"
+4,xhlulu/ieee-fraud-xgboost-with-gpu,XGBoost GPU d9 x500,0.9226972845334857,25.365587949752808,holdout temporal 75/25,identico a #5 pero GPU: 4.4x mas rapido
+3,nroman/lgb-single-model-lb-0-9419,LightGBM CPU (params Bayes opt),0.92002773641878,462.4521064758301,TimeSeriesSplit 3 folds,RFE 120 features + count/day/hour/interacciones
+2,cdeotte/xgb-fraud-with-magic [XGB_95],XGBoost GPU d12,0.9375399801237184,163.19765734672546,OOF GroupKFold 3 meses,sin magic: ~120 V-cols + FE base + D normalizadas
+1,cdeotte/xgb-fraud-with-magic [XGB_96] 1er PUESTO,XGBoost GPU d12 + magic UID,0.9479458604161176,192.44664859771729,OOF GroupKFold 3 meses,+UID card1+addr1+D1n y 40+ agregaciones: +0.0104 AUC

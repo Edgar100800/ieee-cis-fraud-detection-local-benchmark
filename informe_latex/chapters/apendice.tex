@@ -1,0 +1,70 @@
+\chapter{Reproducibilidad}
+\label{cap:apendice}
+
+\section{Estructura del proyecto}
+
+\begin{verbatim}
+PROYECTO1_PLANIFICA/
+|-- data/raw/                 dataset oficial (CSV) + leaderboard publico
+|-- codigos/
+|   |-- ejecutados/           4 notebooks reproducidos (.ipynb + .py)
+|   |-- descartados/          8 notebooks analizados sin ejecutar
+|   `-- _RESUMEN_TECNICAS.md  inventario de tecnicas por notebook
+|-- src/                      benchmarks reproducibles
+|   |-- bench_01_inversion.py baseline XGB CPU
+|   |-- bench_02_xhlulu.py    baseline XGB GPU
+|   |-- bench_03_nroman.py    LightGBM + FE (TimeSeriesSplit)
+|   |-- bench_04_cdeotte.py   XGB d12 con/sin magic UID
+|   |-- download_notebooks.py descarga via API publica de Kaggle
+|   |-- extract_notebooks.py  exportacion .ipynb -> .py
+|   `-- make_ranking.py       consolidacion de resultados
+|-- results/                  CSV y logs de cada benchmark + ranking
+`-- informe_latex/            este informe (tectonic main.tex)
+\end{verbatim}
+
+\section{Entorno}
+
+\begin{itemize}
+  \item Linux; Python 3.12 en entorno \texttt{uv}; pandas 3.0, XGBoost 3.4,
+        LightGBM 4.x, scikit-learn.
+  \item CPU 16 núcleos; NVIDIA RTX 2060 6\,GB (driver 610).
+  \item Datos: \texttt{kaggle competitions download -c ieee-fraud-detection}
+        (requiere aceptar las reglas de la competencia).
+\end{itemize}
+
+\section{Ejecución de los experimentos}
+
+\begin{verbatim}
+uv venv --python 3.12 .venv
+uv pip install pandas numpy scikit-learn lightgbm xgboost
+uv pip install matplotlib
+.venv/bin/python src/bench_01_inversion.py     # AUC 0.9191, 112 s
+.venv/bin/python src/bench_02_xhlulu.py        # AUC 0.9227,  25 s (GPU)
+.venv/bin/python src/bench_03_nroman.py        # AUC 0.9200, 462 s
+.venv/bin/python src/bench_04_cdeotte.py       # 0.9375 -> 0.9479 (GPU)
+.venv/bin/python informe_latex/scripts/generar_graficos.py
+tectonic informe_latex/main.tex
+\end{verbatim}
+
+\section{Adaptaciones de versiones (2019 $\to$ 2026)}
+
+\begin{itemize}
+  \item \textbf{XGBoost $\ge$2}: \texttt{tree\_method='gpu\_hist'} se reemplaza por
+        \texttt{tree\_method='hist', device='cuda'}; \texttt{early\_stopping\_rounds} y
+        \texttt{eval\_metric} pasan al constructor del estimador.
+  \item \textbf{LightGBM $\ge$4}: los argumentos \texttt{early\_stopping\_rounds} y
+        \texttt{verbose\_eval} de \texttt{lgb.train} se sustituyen por los
+        \emph{callbacks} \texttt{lgb.early\_stopping()} y \texttt{lgb.log\_evaluation()}.
+  \item \textbf{pandas 3}: las cadenas leídas de CSV adoptan el dtype \texttt{str} (no
+        \texttt{object}); las condiciones \texttt{dtype=='object'} deben reemplazarse por
+        \texttt{pd.api.types.is\_numeric\_dtype(...)} negado. \texttt{LabelEncoder} se
+        sustituye de forma segura por \texttt{pd.factorize(sort=True)} cuando hay tipos mixtos.
+  \item \textbf{RAPIDS cuDF} (notebook GPU de Deotte): requiere $>$6\,GB de VRAM; no ejecutable
+        en la RTX 2060, se analizó cualitativamente.
+\end{itemize}
+
+\section{Protocolo ético}
+
+El estudio se limita a material público con licencia abierta (Apache 2.0 en los notebooks
+citados). No se realizó ninguna submisión a la competencia ni uso de servicios externos con los
+datos; toda la evidencia numérica proviene de ejecuciones locales.

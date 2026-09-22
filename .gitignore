@@ -1,0 +1,29 @@
+# Datos (1.4 GB) — descargar de Kaggle, ver README
+data/raw/
+
+# Entorno virtual
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Credenciales (nunca commitear)
+kaggle.json
+kaggle_access_token
+access_token
+*.token
+.env
+
+# Artefactos de compilación LaTeX
+informe_latex/build/
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+
+# Sistema
+.DS_Store
+Thumbs.db

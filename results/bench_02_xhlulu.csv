@@ -1,0 +1,2 @@
+notebook,device,auc_holdout,fit_s,best_iter,n_features
+xhlulu-xgb-gpu,gpu,0.9226972845334857,25.365587949752808,313,432

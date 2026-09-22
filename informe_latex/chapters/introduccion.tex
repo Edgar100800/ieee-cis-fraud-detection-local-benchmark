@@ -1,0 +1,59 @@
+\chapter{Introducción}
+\label{cap:intro}
+
+\section{Motivación}
+
+El fraude en pagos \emph{card-not-present} (CNP) genera pérdidas anuales de miles de millones de
+dólares y plantea un problema de clasificación binaria particular: el conjunto de datos está
+fuertemente desbalanceado (alrededor del 3{,}5\,\% de transacciones fraudulentas), las features
+son en su mayoría anónimas o ofuscadas por razones comerciales, y ---lo más importante---
+\emph{el futuro no se parece al pasado}: los patrones de ataque cambian, por lo que un modelo que
+sobreajusta el período de entrenamiento degrada rápidamente su desempeño en producción.
+
+La competencia \emph{IEEE-CIS Fraud Detection}~\cite{ieee-cis} (Kaggle, 2019), organizada por la
+IEEE Computational Intelligence Society junto a Vesta Corporation, formalizó este problema sobre
+transacciones reales de comercio electrónico. Contó con 6\,355 equipos participantes y consolidó
+un cuerpo público de soluciones de altísima calidad, entre las que destaca la técnica del
+\emph{magic UID} de Chris Deotte y Konstantin Yakovlev (equipo \emph{FraudSquad}, 2.\textsuperscript{o}
+en el tablero público y 1.\textsuperscript{o} en el privado).
+
+\section{Objetivos}
+
+\begin{enumerate}
+  \item \textbf{Recolectar} las mejores soluciones públicas de la competencia (notebooks con
+        mayor reputación y write-ups de equipos ganadores).
+  \item \textbf{Reproducir localmente} los notebooks que producen modelos entrenables, mediendo
+        AUC y costo computacional sobre hardware propio (16 núcleos CPU, NVIDIA RTX 2060 de 6\,GB).
+  \item \textbf{Aislar} mediante ablación controlada qué componente explica la ganancia de
+        rendimiento: el algoritmo, el hardware o la ingeniería de variables.
+  \item \textbf{Documentar} las técnicas de tratamiento de datos y de modelado, dejando un
+        pipeline reproducible como base para una propuesta propia.
+\end{enumerate}
+
+\section{Metodología general}
+
+El estudio siguió cuatro fases:
+
+\begin{enumerate}
+  \item \textbf{Selección de código}: se identificaron los 12 notebooks públicos con mayor
+        reputación (2\,986 a 169 votos) mediante el índice curado \emph{Must-see Kernels}
+        \cite{mustsee} y el API público de Kaggle. Cada fuente se descargó en formato
+        \texttt{.ipynb} y se exportó a Python legible.
+  \item \textbf{Triaje}: se clasificó cada notebook en \emph{ejecutable} (produce un modelo
+        entrenable) o \emph{analítico} (EDA pura, técnicas de re-muestreo, infraestructura GPU
+        no compatible con 6\,GB de VRAM). Cuatro notebooks resultaron ejecutables.
+  \item \textbf{Reproducción local}: los 4 ejecutables se adaptaron a las versiones modernas de
+        las librerías (XGBoost~$\ge$~2, LightGBM~$\ge$~4, pandas~3) y se ejecutaron con el
+        conjunto completo de entrenamiento, bajo un protocolo de validación temporal uniforme
+        (\cref{sec:validacion}).
+  \item \textbf{Análisis comparativo}: se comparó AUC y tiempo de cómputo, y se realizó una
+        ablación \emph{con/sin magic UID} sobre el mismo modelo para atribuir la ganancia.
+\end{enumerate}
+
+\section{Estructura del informe}
+
+\cref{cap:datos} describe el conjunto de datos; \cref{cap:tratamiento} detalla las técnicas de
+tratamiento y de ingeniería de variables; \cref{cap:modelos} presenta los modelos comparados;
+\cref{cap:resultados} muestra los resultados locales con sus gráficos; \cref{cap:discusion}
+discute ventajas, límites metodológicos y lecciones; \cref{cap:conclusiones} concluye y propone
+el desarrollo futuro. \cref{cap:apendice} documenta la reproducibilidad completa.

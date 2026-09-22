@@ -1,0 +1,11 @@
+\begin{tabular}{lrccl}
+\toprule
+Modelo & AUC & Tiempo & Validación & Técnica clave \\
+\midrule
+Baseline XGBoost CPU (inversion) & 0.9191 & 112\,s & holdout temporal 75/25 & 432 features crudas \\
+Baseline XGBoost GPU (xhlulu) & 0.9227 & 25\,s & holdout temporal 75/25 & identico al anterior, en GPU \\
+LightGBM + FE (nroman) & 0.9200 & 462\,s & TimeSeriesSplit $\times$3 & RFE 120 features + count encoding \\
+XGBoost d12 sin UID (cdeotte 95) & 0.9375 & 163\,s & GroupKFold mensual $\times$3 & V-cols seleccionadas + D normalizadas \\
+XGBoost d12 + magic UID (cdeotte 96) & \textbf{0.9479} & 192\,s & GroupKFold mensual $\times$3 & UID + $\sim$40 agregaciones por cliente \\
+\bottomrule
+\end{tabular}

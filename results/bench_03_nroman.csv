@@ -1,0 +1,2 @@
+notebook,device,auc_mean_timeseriessplit,auc_folds,cv_s,n_features
+nroman-lgb-single,cpu,0.92002773641878,"[np.float64(0.9110530127271049), np.float64(0.920671729362244), np.float64(0.928358467166991)]",462.4521064758301,298

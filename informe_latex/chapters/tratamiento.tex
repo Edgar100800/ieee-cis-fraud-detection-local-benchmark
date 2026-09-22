@@ -1,0 +1,176 @@
+\chapter{Tratamiento de datos e ingeniería de variables}
+\label{cap:tratamiento}
+
+Este capítulo documenta las técnicas de preparación de datos extraídas del código real de los
+cuatro notebooks ejecutados, ordenadas de lo básico a lo que diferencia a la solución ganadora.
+
+\section{Integración y tipos de datos}
+
+Las dos tablas se integran por \texttt{TransactionID} con unión izquierda (la identidad es
+opcional). Dado que \texttt{train\_transaction.csv} ocupa 2{,}2\,GB en memoria por defecto, se
+aplican dos optimizaciones de tipo:
+
+\begin{itemize}
+  \item numéricos a \texttt{float32} / \texttt{int16} donde el rango lo permite (reduce la
+        memoria a la mitad, habilitando GPU);
+  \item categóricas a \texttt{category} (diccionario de enteros) o \texttt{int16} vía
+        \texttt{factorize}.
+\end{itemize}
+
+\section{Valores faltantes: codificar en vez de imputar}
+
+Los notebooks de referencia convierten el faltante en \emph{información}:
+
+\begin{lstlisting}
+X_train = X_train.fillna(-999)          # baseline (inversion, xhlulu)
+clf = xgb.XGBClassifier(..., missing=-999)
+\end{lstlisting}
+
+El árbol de decisión aprende que $-999$ es una ``categoría desconocida'' y puede ramificar
+sobre ella; imputar con la media, en cambio, fabrica valores plausibles y falsos. En la
+solución de Deotte el esquema es más fino: los numéricos se desplazan para hacerlos positivos
+y el faltante se codifica como $-1$:
+\begin{lstlisting}
+mn = min(X_train[f].min(), X_test[f].min())
+X_train[f] -= mn;  X_train[f].fillna(-1, inplace=True)
+\end{lstlisting}
+
+\section{Codificación de variables categóricas}
+
+Tres variantes aparecen en el código estudiado:
+
+\begin{enumerate}
+  \item \textbf{Etiqueta entera} (\texttt{LabelEncoder} / \texttt{factorize}): suficiente para
+        árboles, que tratan los códigos como categorías ordinales arbitrarias. Se ajusta sobre
+        train y test juntos para compartir el diccionario.
+  \item \textbf{Codificación de frecuencia} (\emph{count encoding}, nroman): reemplaza cada
+        categoría por su frecuencia de aparición.
+        \begin{lstlisting}
+train['card1_count'] = train['card1'].map(train['card1'].value_counts(dropna=False))
+        \end{lstlisting}
+        Es una agregación ``de bolsillo'': una tarjeta con miles de transacciones es una tarjeta
+        comprometida, y esta señal queda expuesta como número.
+  \item \textbf{Interacciones como cadena} (nroman, Deotte): concatenar dos categóricas crea una
+        entidad más fina.
+        \begin{lstlisting}
+train['card1__card5'] = train['card1'].astype(str) + '_' + train['card5'].astype(str)
+train['uid'] = train['card1_addr1'].astype(str) + '_' + (day - D1).astype(str)
+        \end{lstlisting}
+\end{enumerate}
+
+Variables derivadas simples pero efectivas: día de la semana y hora del día a partir de
+\texttt{TransactionDT}; parte decimal del monto ($(A - \lfloor A\rfloor)\times 1000$, patrón de
+centavos de bots); \texttt{log1p} del monto (kyakovlev).
+
+\section{Normalización de columnas D (estabilización temporal)}
+\label{sec:dcols}
+
+Las columnas \texttt{D1}--\texttt{D15} significan ``días transcurridos desde un evento previo''
+medidos \emph{en el momento de la transacción}: por construcción derivan con el tiempo absoluto
+y el modelo confunde ``mucho tiempo transcurrido'' con ``fraude''. La solución de Deotte
+resta el reloj absoluto:
+
+\begin{lstlisting}
+for i in [4,5,6,8,10,11,12,13,14,15]:
+    X_train['D'+str(i)] -= X_train.TransactionDT / (24*60*60)
+    X_test ['D'+str(i)] -= X_test.TransactionDT  / (24*60*60)
+\end{lstlisting}
+
+\cref{fig:d15} muestra el efecto sobre \texttt{D15}: de una nube con pendiente (train y test
+viven en rangos distintos) a una banda horizontal estacionaria, directamente transferible al
+futuro. La misma idea es la que motiva la \emph{validación adversarial} presente en el corpus
+estudiado: entrenar un clasificador train-vs-test y normalizar las variables que lo separan.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.98\textwidth]{\figdir fig_d15_normalizacion.pdf}
+  \caption{Normalización de \texttt{D15}. Izquierda: la variable cruda deriva con el tiempo.
+           Derecha: tras restar el reloj absoluto queda una banda estable, comparable entre
+           entrenamiento y futuro.}
+  \label{fig:d15}
+\end{figure}
+
+\section{Selección por consistencia temporal}
+\label{sec:timeconsistency}
+
+La solución de Deotte elimina explícitamente las variables cuyo histograma difiere entre el
+inicio y el fin del período de entrenamiento (p.\,ej.\ \texttt{C3}, \texttt{M5}, \texttt{id\_08},
+\texttt{id\_33}, \texttt{card4}). El criterio es estadístico y barato: si una variable ya no es
+estable dentro del entrenamiento, su relación con el fraude tampoco lo será en el mes de prueba.
+De las 339 columnas \texttt{V} se conservan $\sim$120, elegidas por bloques de correlación en un
+EDA previo del mismo autor.
+
+\section{El pseudo-identificador de cliente (\emph{magic UID})}
+\label{sec:uid}
+
+El dato que más ayudaría ---el identificador del cliente--- no existe en el conjunto. La
+solución ganadora lo reconstruye a partir de tres columnas:
+\begin{equation}
+  \texttt{uid} \;=\; \underbrace{\texttt{card1\_addr1}}_{\text{tarjeta + dirección}}
+  \;\Vert\;
+  \underbrace{\big\lfloor \tfrac{\texttt{TransactionDT}}{86400} - \texttt{D1} \big\rfloor}_{\text{día estimado de alta de la cuenta}}
+  \label{eq:uid}
+\end{equation}
+donde \texttt{D1} (días desde la primera transacción) actúa como huella de antigüedad de la
+cuenta. La combinación sobrevive al cambio de dispositivo y de correo. \cref{fig:uid} resume el
+esquema completo: a partir del UID se generan tres familias de agregaciones y \emph{luego el UID
+se elimina}; nunca entra al modelo como variable.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.98\textwidth]{\figdir fig_esquema_uid.pdf}
+  \caption{Esquema de la técnica del \emph{magic UID}: reconstrucción del cliente a partir de
+           \eqref{eq:uid} y generación de agregaciones por grupo. El identificador se usa solo
+           como llave de agrupación y se descarta antes del entrenamiento.}
+  \label{fig:uid}
+\end{figure}
+
+Las tres familias de agregaciones, tal como aparecen en el código original:
+
+\begin{lstlisting}
+# frecuencia del grupo: ¿cuántas transacciones acumula este cliente?
+encode_FE(X_train, X_test, ['uid'])
+
+# media y desviacion por grupo: ¿es anomalo este monto/delta PARA ESTE cliente?
+encode_AG(['TransactionAmt','D4','D9','D10','D15'], ['uid'], ['mean','std'])
+encode_AG(['C'+str(x) for x in range(1,15) if x!=3], ['uid'], ['mean'])
+encode_AG(['M'+str(x) for x in range(1,10)], ['uid'], ['mean'])
+
+# cardinalidad por grupo: ¿cuantos valores distintos usa el cliente?
+encode_AG2(['P_emaildomain','dist1','id_02','cents'], ['uid'])
+encode_AG2(['C13','V314','V127','V136','V309','V307','V320'], ['uid'])
+
+# interaccion ad-hoc: direccion de envio de otro "mundo" temporal
+X_train['outsider15'] = (np.abs(X_train.D1 - X_train.D15) > 3).astype('int8')
+\end{lstlisting}
+
+La intuición estadística es la reducción de varianza intra-grupo: un árbol que solo ve la
+variable $X$ comete errores de contexto, mientras que la media de $X$ dentro del grupo del
+cliente contextualiza cada observación y vuelve trivial la separación de los casos anómalos.
+\cref{sec:ablacion} cuantifica este efecto en el experimento de ablación: $+0{,}0104$ de AUC
+con el modelo idéntico.
+
+\section{Protocolo de validación}
+\label{sec:validacion}
+
+Dada la partición temporal de la competencia, se adoptaron tres esquemas según el propósito:
+
+\begin{description}
+  \item[Holdout temporal 75/25] entrenar con los primeros $\sim$136 días y validar con los
+        últimos $\sim$46. Rápido, para iterar (baseline, XGB\_95/96).
+  \item[\texttt{TimeSeriesSplit} $\times$3] ventanas crecientes con validación siempre
+        ``hacia adelante'' (nroman).
+  \item[\texttt{GroupKFold} mensual $\times$3] cada fold reserva \emph{meses completos} como
+        validación, agrupando por mes calendario reconstruido desde
+        \texttt{START\_DATE 2017-11-30} (XGB\_95/96). Es el esquema más fiel al operativo real
+        y el que se reporta como AUC local principal.
+\end{description}
+
+\section{Limitación conocida del protocolo}
+
+Las agregaciones por UID se computan sobre \emph{todo} el período de entrenamiento, incluido el
+mes reservado como validación (aunque \emph{sin} usar la etiqueta del mes reservado para
+construir el modelo: el leak es de estadísticas de grupo, no de clases). Esto reproduce
+fielmente el protocolo original de la competencia y explica parte del nivel absoluto de AUC
+local; una variante estrictamente causal (agregar solo transacciones anteriores a cada
+\texttt{TransactionDT}) queda propuesta como trabajo futuro en \cref{sec:futuro}.

@@ -1,0 +1,77 @@
+\chapter{Modelos comparados}
+\label{cap:modelos}
+
+Los cuatro notebooks ejecutables comparten la misma familia algorítmica ---\emph{gradient
+boosted trees}--- y difieren en el tratamiento de datos, el hardware y el protocolo de
+validación. Esta homogeneidad es intencional: hace atribuible cualquier diferencia de AUC a la
+ingeniería de variables. \cref{tab:modelos} resume las configuraciones.
+
+\begin{table}[ht]
+  \centering
+  \caption{Configuraciones comparadas. ``d9/d12'' denota profundidad máxima del árbol.}
+  \label{tab:modelos}
+  \small
+  \begin{tabular}{lllll}
+    \toprule
+    & Baseline CPU & Baseline GPU & LightGBM (nroman) & XGB d12 (cdeotte) \\
+    \midrule
+    Librería        & XGBoost 3.4  & XGBoost 3.4  & LightGBM 4.x & XGBoost 3.4 \\
+    Dispositivo     & CPU (16 hilos) & RTX 2060    & CPU (16 hilos) & RTX 2060 \\
+    Profundidad     & 9            & 9            & 31 hojas     & 12 \\
+    Árboles         & 500          & 500          & $\le$5\,000 (ES) & 2\,000--5\,000 (ES) \\
+    Tasa de aprend. & 0.05         & 0.05         & 0.0069       & 0.02 \\
+    Features        & 432 crudas   & 432 crudas   & 298 (RFE + FE) & $\sim$200 (V + UID) \\
+    Categóricas     & etiqueta     & etiqueta     & etiqueta     & etiqueta + frecuencia \\
+    Validación      & holdout 75/25 & holdout 75/25 & TSSplit $\times$3 & GroupKFold mes $\times$3 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Baseline XGBoost (inversion, xhlulu)}
+
+El punto de referencia: unión de tablas, relleno de faltantes con $-999$, etiquetado entero de
+categóricas y \texttt{XGBClassifier} de profundidad 9 con 500 árboles. La variante GPU delega el
+histograma y la construcción de árboles a la RTX 2060. En XGBoost moderno la invocación es:
+\begin{lstlisting}
+xgb.XGBClassifier(n_estimators=500, max_depth=9, learning_rate=0.05,
+                  subsample=0.9, colsample_bytree=0.9, missing=-999,
+                  tree_method='hist', device='cuda')   # ex 'gpu_hist'
+\end{lstlisting}
+
+\section{LightGBM con selección de variables (nroman)}
+
+Parte de 120 variables ``útiles'' obtenidas por eliminación recursiva de características (RFE)
+en un notebook hermano, añade codificación de frecuencia, variables de calendario,
+interacciones y el decimal del monto, y entrena LightGBM con hiperparámetros de optimización
+bayesiana (\cref{tab:modelos}), validación \texttt{TimeSeriesSplit} y parada temprana. El modelo
+final re-entrena con todo el período y el número óptimo de iteraciones.
+
+\section{XGBoost con ingeniería de entidades (cdeotte XGB\_95 / XGB\_96)}
+
+Un único diseño de modelo (profundidad 12, 2\,000--5\,000 árboles, tasa 0.02, muestreo
+0.8/0.4) evaluado en dos niveles de tratamiento de datos:
+
+\begin{description}
+  \item[XGB\_95 (sin UID):] selección de $\sim$120 columnas \texttt{V} por bloques de
+        correlación, normalización de columnas \texttt{D}, codificación de frecuencia de
+        tarjeta/dirección/correo, combinaciones \texttt{card1+addr1(+email)}, agregaciones
+        \emph{por tarjeta} de monto y \texttt{D9}/\texttt{D11}, y descarte por consistencia
+        temporal.
+  \item[XGB\_96 (con magic UID):] todo lo anterior \emph{más} el pseudo-cliente de
+        \cref{sec:uid} y sus $\sim$40 agregaciones. El modelo es idéntico al de XGB\_95:
+        la ablación de \cref{sec:ablacion} aísla el aporte del UID.
+\end{description}
+
+El notebook original cierra con un post-procesado que suaviza las probabilidades promediando
+dentro de cada UID (transacciones del mismo cliente deberían recibir scores similares); ese
+paso requiere listas externas de limpieza de UIDs y queda fuera del alcance local, documentado
+como trabajo futuro.
+
+\section{Costo computacional}
+
+La RTX 2060 (6\,GB) acelera el entrenamiento 4.4$\times$ respecto a 16 núcleos CPU en el
+baseline, con AUC indistinguible: la GPU es una palanca de \emph{productividad} (más
+iteraciones por hora), no de precisión. El límite de memoria también define fronteras
+prácticas: el flujo \emph{RAPIDS cuDF} del mismo autor (todo el preprocesamiento en GPU,
+15$\times$ más rápido) exige más de 6\,GB de VRAM y no fue ejecutable en este hardware;
+queda documentado en el corpus descartado.

@@ -1,0 +1,2 @@
+notebook,device,auc_holdout,fit_s,best_iter,n_features
+inversion-simple-xgb,cpu,0.9190839078396292,111.73662614822388,319,432

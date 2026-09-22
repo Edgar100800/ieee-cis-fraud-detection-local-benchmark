@@ -1,0 +1,85 @@
+\chapter{Resultados}
+\label{cap:resultados}
+
+\section{Comparación principal}
+
+\cref{tab:ranking} presenta los resultados de la reproducción local. Todos los AUC provienen de
+validación temporal ejecutada en esta máquina sobre el conjunto completo de entrenamiento; no se
+realizó ninguna submisión a Kaggle (el estudio es estrictamente local).
+
+\begin{table}[ht]
+  \centering
+  \caption{Ranking local: AUC y costo computacional por método. El AUC principal de cada método
+           se reporta en su esquema de validación propio (columna Validación).}
+  \label{tab:ranking}
+  \resizebox{\textwidth}{!}{\input{\tabdir tabla_ranking}}
+\end{table}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.9\textwidth]{\figdir fig_auc_comparacion.pdf}
+  \caption{AUC local por método. El salto relevante ocurre al pasar de features crudas a la
+           ingeniería de entidades (rojo): el mismo algoritmo gana $+0{,}018$ con la preparación
+           de datos de Deotte y $+0{,}010$ adicionales con el magic UID.}
+  \label{fig:auc-comp}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.88\textwidth]{\figdir fig_auc_vs_tiempo.pdf}
+  \caption{Precisión vs.\ costo computacional. La GPU reduce el tiempo del baseline de 112\,s a
+           25\,s (4.4$\times$) sin alterar el AUC; la mayor precisión exige más cómputo
+           (profundidad 12 y hasta 5\,000 árboles) pero la ganancia dominante proviene de los
+           datos, no del cómputo.}
+  \label{fig:auc-tiempo}
+\end{figure}
+
+\section{Ablación del magic UID}
+\label{sec:ablacion}
+
+\cref{fig:ablacion} muestra el experimento clave. Con el modelo, los hiperparámetros y el
+hardware idénticos, añadir el pseudo-cliente y sus agregaciones produce:
+
+\begin{equation}
+  \Delta\text{AUC}_{\text{UID}} = 0{,}9479 - 0{,}9375 = +0{,}0104
+\end{equation}
+medido con validación OOF \texttt{GroupKFold} mensual.
+
+La ganancia es superior a la de cualquier otro cambio estudiado y se atribuye íntegramente a la
+representación de datos: el identificador nunca ingresa al árbol, solo sus estadísticas de
+grupo. En el holdout temporal 75/25 el efecto es consistente ($0{,}9433$ vs.\ $0{,}9370$).
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.78\textwidth]{\figdir fig_ablacion_uid.pdf}
+  \caption{Ablación con/sin magic UID sobre el mismo modelo (XGBoost d12). La diferencia entre
+           barras del mismo color es el aporte puro de la ingeniería de entidades.}
+  \label{fig:ablacion}
+\end{figure}
+
+\section{Qué variables dominan}
+
+Un ajuste exploratorio rápido de XGBoost (150 árboles, sobre las familias \texttt{C/D/V} y las
+columnas de tarjeta) confirma la estructura de señal esperada: dominan los conteos
+\texttt{C13}, \texttt{C14}, \texttt{C1}, los deltas de tiempo normalizables (\texttt{D10},
+\texttt{D15}, \texttt{D4}) y las columnas de tarjeta/dirección que componen el UID
+(\cref{fig:topfeat}). Es coherente con la tesis del informe: la señal discriminante es
+\emph{comportamental} (actividad por entidad y ventanas de tiempo), no transaccional aislada.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.82\textwidth]{\figdir fig_top_features.pdf}
+  \caption{Importancia (gain) de las 20 variables principales en un XGBoost exploratorio.
+           El peso de conteos, deltas temporales y tarjetas anticipa por qué las agregaciones
+           por cliente resultan tan efectivas.}
+  \label{fig:topfeat}
+\end{figure}
+
+\section{Referencias cruzadas con Kaggle}
+
+Los puntajes públicos de los mismos métodos en la competencia (fuera de este estudio, solo como
+referencia) fueron: baseline $\sim$0{,}943, nroman 0{,}9419, XGB\_95 0{,}9514 y XGB\_96
+0{,}9627. El \emph{ordenamiento} local coincide con el de la competencia: más ingeniería de
+entidades $\Rightarrow$ más AUC. El nivel absoluto local es menor porque el tablero evalúa el
+mes posterior con un cuarto de las transacciones y los puntajes públicos históricos se obtuvieron
+con submisión directa; nuestra validación local es deliberadamente más exigente.
