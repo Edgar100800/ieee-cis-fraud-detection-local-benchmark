@@ -1,0 +1,294 @@
+% Presentación final — Proyecto 1 · Planifica
+% Compilar: cd presentacion && tectonic planifica_presentacion.tex
+\documentclass[aspectratio=169,11pt]{beamer}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{array}
+
+\graphicspath{{../informe_latex/figures/}}
+
+% Paleta del informe
+\definecolor{ink}{HTML}{13263A}
+\definecolor{teal}{HTML}{0F766E}
+\definecolor{coral}{HTML}{D95B43}
+\definecolor{slate}{HTML}{52606D}
+\definecolor{mist}{HTML}{EEF4F5}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamercolor{background canvas}{bg=white}
+\setbeamercolor{frametitle}{bg=ink,fg=white}
+\setbeamercolor{title}{fg=ink}
+\setbeamercolor{block title}{bg=teal,fg=white}
+\setbeamercolor{block body}{bg=mist,fg=ink}
+\setbeamercolor{block title alerted}{bg=coral,fg=white}
+\setbeamercolor{block body alerted}{bg=mist,fg=ink}
+\setbeamerfont{frametitle}{series=\bfseries,size=\large}
+\setbeamerfont{block title}{series=\bfseries,size=\normalsize}
+
+% Tarjeta de dato destacado
+\newcommand{\statcard}[3]{%
+  \begin{beamercolorbox}[center,sep=0.22cm,rounded=true]{#2}%
+    {\Large\bfseries #3}\par\vspace{0.02em}{\footnotesize #1}%
+  \end{beamercolorbox}%
+}
+
+% Pie de página
+\setbeamertemplate{footline}{%
+  \leavevmode%
+  \hbox{%
+    \begin{beamercolorbox}[wd=.75\paperwidth,ht=2.4mm,dp=1.6mm,leftskip=2mm]{author in head/foot}%
+      \usebeamerfont{author in head/foot}\color{slate}\scriptsize Proyecto 1 · Planificación y Toma de Decisiones en IA
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.25\paperwidth,ht=2.4mm,dp=1.6mm,rightskip=2mm]{page number in head/foot}%
+      \hfill\color{slate}\scriptsize\insertframenumber\,/\,\inserttotalframenumber
+    \end{beamercolorbox}}%
+}
+\setbeamercolor{author in head/foot}{bg=white}
+\setbeamercolor{page number in head/foot}{bg=white}
+
+\title{Sistema inteligente adaptativo para detección de fraude}
+\subtitle{IEEE-CIS Fraud Detection · datos no estacionarios}
+\author{Edgar Chambilla}
+\date{Septiembre 2026}
+
+\begin{document}
+
+% ---------- 1 · Portada ----------
+\begin{frame}
+  \vspace{0.5em}
+  {\scriptsize\color{coral}\bfseries PROYECTO 1}\\[0.2em]
+  {\color{ink}\Huge\bfseries Sistema inteligente adaptativo\\[0.15em] para detección de fraude}\\[0.5em]
+  {\color{slate}\large IEEE-CIS Fraud Detection · datos no estacionarios}\\[0.2em]
+  {\color{slate}Línea base reproducida, ventanas temporales y monitoreo de drift}
+  \vspace{1.0em}
+  \begin{center}
+    \begin{tabular}{ccc}
+      {\color{teal}\bfseries DATOS} & {\color{teal}\bfseries MODELO} & {\color{teal}\bfseries ADAPTACIÓN}\\
+      orden temporal & score de fraude & PSI + ventanas\\
+    \end{tabular}\vspace{0.4em}
+    {\color{slate}\small medir \,$\rightarrow$\, decidir \,$\rightarrow$\, ajustar}
+  \end{center}
+  \vfill
+  {\color{slate}Edgar Chambilla · Septiembre 2026}
+\end{frame}
+
+% ---------- 2 · Problema ----------
+\begin{frame}{La distribución del fraude cambia con el tiempo}
+  \framesubtitle{El modelo se entrena con pasado y se evalúa en bloques futuros}
+  \begin{columns}[T]
+    \begin{column}{0.42\textwidth}
+      \begin{center}
+        \statcard{transacciones de entrenamiento}{mist}{\color{ink}590\,540}\vspace{0.35em}
+        \statcard{fraudes · desbalance 1:27}{mist}{\color{coral}3,50\%}
+      \end{center}
+      \vspace{0.3em}
+      \begin{alertblock}{Riesgo de validación}
+        La validación aleatoria puede inflar el AUC: ordenamos por tiempo y
+        reservamos bloques futuros.
+      \end{alertblock}
+    \end{column}
+    \begin{column}{0.56\textwidth}
+      \begin{center}
+        \includegraphics[width=0.9\textwidth]{fig_fraude_temporal.pdf}\\
+        {\scriptsize\color{slate} La tasa de fraude varía a lo largo del tiempo de la competencia.}
+      \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------- 3 · Representación de datos ----------
+\begin{frame}{La mayor mejora viene de cómo representamos los datos}
+  \framesubtitle{El mismo XGBoost mejora cuando incorpora contexto del cliente implícito}
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      \begin{center}
+        \statcard{AUC con magic UID}{mist}{\color{teal}$+0{,}0104$}
+      \end{center}
+      \vspace{0.15em}
+      \begin{block}{Ranking local}
+        \scriptsize
+        \setlength{\tabcolsep}{4pt}
+        \begin{tabular}{@{}lrr@{}}
+          \toprule
+          Método & AUC & Tiempo\\
+          \midrule
+          XGB d12 + magic UID & \textbf{0,9479} & 192\,s GPU\\
+          XGB d12 sin UID & 0,9375 & 163\,s GPU\\
+          LightGBM + RFE & 0,9200 & 462\,s CPU\\
+          XGBoost GPU & 0,9227 & 25\,s GPU\\
+          XGBoost CPU base & 0,9191 & 112\,s CPU\\
+          \bottomrule
+        \end{tabular}
+      \end{block}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \begin{center}
+        \includegraphics[width=\textwidth]{fig_auc_comparacion.pdf}
+      \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------- 4 · Ablación ejecutada (notebooks 04 y 05) ----------
+\begin{frame}{Ablación ejecutada en local: con y sin magic UID}
+  \framesubtitle{Notebooks 04 y 05 · XGBoost d12 GPU · semilla 42 · validación temporal honesta}
+  \begin{columns}[T]
+    \begin{column}{0.44\textwidth}
+      \begin{block}{Sistema integrado (05): holdout 75/25 y OOF mensual $\times$3}
+        \small
+        \begin{tabular}{@{}lrr@{}}
+          \toprule
+          Modelo & Holdout & OOF\\
+          \midrule
+          sin UID & 0,9340 & 0,9347\\
+          + magic UID & \textbf{0,9456} & \textbf{0,9509}\\
+          \midrule
+          \textcolor{teal}{\textbf{ganancia}} & \textcolor{teal}{\textbf{+0,0116}} & \textcolor{teal}{\textbf{+0,0162}}\\
+          \bottomrule
+        \end{tabular}
+      \end{block}
+      \small La ganancia proviene de la \textbf{representación de datos}: mismo algoritmo,
+      mismo hardware y misma semilla. La validación debe ser temporal; un KFold aleatorio
+      infla el resultado.
+    \end{column}
+    \begin{column}{0.54\textwidth}
+      \begin{center}
+        \includegraphics[width=0.92\textwidth]{fig_ablacion_uid.pdf}\\[0.2em]
+        \includegraphics[width=0.66\textwidth]{fig_esquema_uid.pdf}
+      \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------- 5 · Pipeline de decisión ----------
+\begin{frame}{El score se convierte en una decisión auditable}
+  \framesubtitle{Las métricas indican cuándo actualizar el modelo}
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      \centering
+      \footnotesize
+      \begin{tabular}{@{}ll@{}}
+        \textcolor{teal}{\textbf{1.}} Datos & transacción + identidad\\
+        \textcolor{teal}{\textbf{2.}} Validación & orden temporal\\
+        \textcolor{teal}{\textbf{3.}} Features & UID causal + D\\
+        \textcolor{teal}{\textbf{4.}} Modelo & XGBoost\\
+        \textcolor{teal}{\textbf{5.}} Score & incertidumbre\\
+        \textcolor{teal}{\textbf{6.}} Decisión & aprobar / revisar / bloquear\\
+        \textcolor{teal}{\textbf{7.}} Monitoreo & AUC · PSI · costo\\
+        \textcolor{teal}{\textbf{8.}} Adaptación & ventana + reentrenamiento\\
+      \end{tabular}
+      \vspace{0.5em}
+      \begin{block}{Métricas de decisión (mejor modelo, OOF)}
+        \scriptsize
+        \begin{tabular}{@{}lrrr@{}}
+          \toprule
+          Umbral & Accuracy & Recall & Precisión\\
+          \midrule
+          0{,}50 & 0,9801 & 0,4751 & 0,9132\\
+          0{,}19 (F1$^{*}$) & 0,9801 & \textbf{0,6082} & 0,7737\\
+          \bottomrule
+        \end{tabular}
+      \end{block}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \begin{center}
+        \includegraphics[width=0.94\textwidth]{fig_arquitectura_adaptativa.pdf}
+      \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------- 6 · Protocolo adaptativo ----------
+\begin{frame}{Cada bloque futuro usa solo la información disponible}
+  \framesubtitle{El entrenamiento y las agregaciones respetan el instante de cada transacción}
+  \begin{columns}[T]
+    \begin{column}{0.40\textwidth}
+      \begin{beamercolorbox}[center,sep=0.22cm,rounded=true]{mist}%
+        {\normalsize\bfseries\color{ink}60 días inicial \;$\rightarrow$\; bloques de 30 días}\\
+        {\scriptsize ventanas evaluadas: 30 / 60 / 90 / expansiva}
+      \end{beamercolorbox}
+      \vspace{0.2em}
+      \begin{block}{Criterio de actualización}
+        \small PSI alto o caída de desempeño $\rightarrow$ revisar ventana y reentrenar.
+        Sin alarma, conservar el modelo.
+      \end{block}
+    \end{column}
+    \begin{column}{0.58\textwidth}
+      \begin{center}
+        \includegraphics[width=0.68\textwidth]{fig_top_features.pdf}\\
+        {\scriptsize\color{slate} Dominan conteos, deltas D y tarjetas: por eso funcionan
+        las agregaciones por cliente.}
+      \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------- 7 · Resultados adaptativos ----------
+\begin{frame}{Reducir la historia no garantiza mejor rendimiento}
+  \framesubtitle{Corrida completa: 590\,540 transacciones, bloques futuros de 30 días, XGBoost de 180 árboles}
+  \begin{columns}[T]
+    \begin{column}{0.36\textwidth}
+      \begin{center}
+        \statcard{AUC medio · expansiva}{mist}{\color{teal}\textbf{0,9163}}\vspace{0.2em}
+        \statcard{AUC medio · 30 días}{mist}{\color{coral}0,9039}\vspace{0.2em}
+        \statcard{recall medio (expansiva)}{mist}{\color{ink}0,5831}
+      \end{center}
+      \vspace{0.1em}
+      \small Olvidar datos \emph{no} siempre mejora: la ventana debe validarse
+      temporalmente.
+    \end{column}
+    \begin{column}{0.62\textwidth}
+      \begin{center}
+        \includegraphics[width=0.88\textwidth]{fig_adaptacion_metricas.pdf}\\
+        {\scriptsize\color{slate} El segundo bloque degrada desempeño aunque el PSI no supere
+        el umbral alto: se monitorean ambas señales.}
+      \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------- 8 · Conclusiones ----------
+\begin{frame}{Conclusiones}
+  \framesubtitle{La línea base orienta la adaptación}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{block}{\textcolor{white}{Features causales}}
+        \small El UID aporta contexto de entidad sin usar información futura:
+        $+0{,}01$ AUC de pura ingeniería de representación.
+      \end{block}
+      \begin{block}{\textcolor{white}{Ventanas comparables}}
+        \small La ventana expansiva fue la mejor en esta corrida (AUC 0,9163 vs 0,9039 con 30 días).
+      \end{block}
+      \begin{block}{\textcolor{white}{Monitoreo operativo}}
+        \small AUC, PSI y costo de decisión deciden cuándo reentrenar; el accuracy alto
+        engaña con desbalance 1:27: el recall dirige el umbral.
+      \end{block}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+      \begin{block}{\textcolor{white}{Reproducibilidad}}
+        \scriptsize
+        \begin{tabular}{@{}lr@{}}
+          \toprule
+          Notebook / script & Semilla\\
+          \midrule
+          01 baseline CPU & 0 (default)\\
+          02 XGBoost GPU & 2019\\
+          03 LightGBM & 47 / 11\\
+          04 magic UID & determinístico\\
+          05 integrado & \textbf{42}\\
+          adaptativo & 42\\
+          \bottomrule
+        \end{tabular}
+      \end{block}
+      \scriptsize\color{slate}
+      Código: \texttt{src/adaptive\_fraud.py}\\
+      Notebooks: \texttt{codigos/ejecutados/01--05}\\
+      Informe corto: \texttt{informe\_latex/main\_entrega.pdf}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\end{document}
