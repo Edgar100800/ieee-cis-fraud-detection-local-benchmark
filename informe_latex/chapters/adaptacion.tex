@@ -1,0 +1,67 @@
+\chapter{Sistema adaptativo y concept drift}
+\label{cap:adaptacion}
+
+El benchmark anterior sirve como línea base no adaptativa. Sobre él se implementó una evaluación por
+bloques temporales: cada bloque futuro se predice con las transacciones disponibles hasta ese momento,
+usando una ventana expansiva o una ventana deslizante de tamaño fijo. El protocolo permite observar la
+degradación del modelo, el efecto de olvidar historia y el costo de las decisiones.
+
+\section{Features causales}
+
+Se conserva la idea del \emph{magic UID} del capítulo anterior, pero sus estadísticas se calculan de
+forma causal. Para una transacción en el instante $t$, la frecuencia y los promedios del UID usan solo
+observaciones anteriores a $t$. En el bloque de evaluación se emplean mapas construidos con el histórico
+previo; ninguna fila del futuro actualiza sus propias features antes de ser predicha. Esta corrección
+elimina la limitación transductiva identificada en
+\cref{sec:limites}.
+
+También se derivan el día relativo, la hora, el día de la semana, el mes calendario y versiones
+normalizadas de las columnas $D$. El identificador se elimina antes del entrenamiento: solo funciona
+como llave de agregación.
+
+\section{Ventanas y detección de drift}
+
+El experimento utiliza 60 días iniciales y bloques futuros de 30 días. Se comparan cuatro
+estrategias: histórico completo (ventana expansiva) y ventanas deslizantes de 30, 60 y 90 días.
+Para cada bloque se calcula el Population Stability Index (PSI) sobre monto, variables $D$ y
+conteos $C$. Se marca drift distributivo cuando el PSI máximo supera 0,20; el rendimiento también
+se monitorea mediante AUC, PR-AUC, F1, recall, balanced accuracy y costo de decisión.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.98\textwidth]{\figdir fig_arquitectura_adaptativa.pdf}
+  \caption{Arquitectura propuesta: el monitoreo temporal alimenta la selección de ventana y el
+           reentrenamiento del modelo.}
+  \label{fig:arquitectura-adaptativa}
+\end{figure}
+
+\section{Resultados de la evaluación adaptativa}
+
+La corrida completa usa las 590\,540 transacciones de entrenamiento, XGBoost con 180 árboles,
+umbral de decisión 0,20 y costos $1$ para un falso positivo y $10$ para un falso negativo. Se
+reservan los bloques de los días 60--90, 90--120, 120--150 y 150--180 para evaluación futura.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.99\textwidth]{\figdir fig_adaptacion_metricas.pdf}
+  \caption{Evolución de AUC, F1 y PSI por bloque. El descenso del segundo bloque muestra que el
+           rendimiento puede degradarse aunque el drift distributivo no supere el umbral alto de
+           PSI; por ello se monitorean también métricas de desempeño.}
+  \label{fig:adaptacion-metricas}
+\end{figure}
+
+La ventana expansiva obtuvo un AUC promedio de $0,9163$ y un F1 promedio de $0,5575$. Las ventanas
+de 60 y 90 días alcanzaron AUC promedio de $0,9139$ y $0,9156$, mientras que la ventana de 30 días
+obtuvo $0,9039$. En esta corrida, conservar más historia funcionó mejor: la ventana corta perdió
+señal y no compensó el drift moderado observado. El AUC expansivo bajó de $0,9175$ en el primer bloque
+a $0,9071$ en el segundo, y el costo de decisión subió de 18\,059 a 21\,009 unidades. Por eso el
+sistema monitorea el desempeño aunque el PSI no active una alarma fuerte.
+
+\section{Decisión y adaptación operativa}
+
+El score se transforma en una acción con tres estados: aprobar, enviar a revisión o bloquear. El
+umbral puede modificarse según la utilidad del negocio. En producción, el sistema conservaría el
+modelo vigente mientras monitorea AUC y PSI. Ante una caída de rendimiento, un PSI alto o el cierre de
+un nuevo bloque temporal, recalcularía las features causales y reentrenaría con la ventana seleccionada.
+Todas las predicciones, decisiones y métricas deben quedar registradas para permitir auditoría humana
+y rollback del modelo.

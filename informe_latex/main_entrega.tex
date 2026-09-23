@@ -1,0 +1,187 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[spanish,es-tabla]{babel}
+\usepackage[margin=2cm]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage[table]{xcolor}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage[hidelinks]{hyperref}
+\setlist{nosep,leftmargin=*}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\definecolor{ink}{HTML}{13263A}
+\definecolor{teal}{HTML}{0F766E}
+\definecolor{coral}{HTML}{D95B43}
+\definecolor{slate}{HTML}{52606D}
+\definecolor{mist}{HTML}{EEF4F5}
+\color{ink}
+\titleformat{\section}{\Large\bfseries\color{ink}}{\thesection}{0.6em}{}
+  [\vspace{2pt}\color{teal}\titlerule]
+\titlespacing*{\section}{0pt}{12pt}{6pt}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\footnotesize\color{slate}Sistema inteligente adaptativo}
+\rhead{\footnotesize\color{slate}UTEC · Proyecto 1}
+\cfoot{\footnotesize\color{slate}\thepage}
+\setlength{\headheight}{14pt}
+\newcommand{\figdir}{figures/}
+
+\title{\vspace{-1.2cm}\color{ink}\textbf{Sistema inteligente adaptativo para detección de fraude}\\
+\large\color{slate}Evaluación temporal del dataset IEEE-CIS Fraud Detection}
+\author{Edgar Chambilla\\Proyecto 1: Planificación y Toma de Decisiones en IA}
+\date{Septiembre de 2026}
+
+\begin{document}
+\maketitle
+\vspace{-0.5cm}
+
+\begin{abstract}
+Este trabajo desarrolla un sistema de clasificación para detectar fraude financiero en datos cuyo
+comportamiento cambia con el tiempo. Parte de la línea base del informe técnico anterior, que integra
+las tablas de transacciones e identidad, normaliza variables temporales y entrena XGBoost. La extensión
+añade agregaciones causales por cliente implícito, ventanas expansivas y deslizantes, monitoreo de drift
+con PSI y decisiones basadas en costos. La evaluación usa 590\,540 transacciones y bloques futuros de
+30 días. La ventana expansiva alcanza un AUC promedio de 0,9163; la ventana de 30 días llega a 0,9039.
+En esta corrida, conservar más historia funciona mejor que descartar datos de forma agresiva.
+\end{abstract}
+
+\section{Problema, objetivos y restricciones}
+
+El problema es clasificar cada transacción como legítima o fraudulenta antes de autorizarla. El dataset
+IEEE-CIS contiene 590\,540 transacciones, 20\,663 fraudes (3,50\,\%) y una tabla de identidad
+disponible solo para una parte de los casos. La variable \texttt{TransactionDT} ordena aproximadamente seis
+meses de actividad, por lo que una validación aleatoria produciría fuga de información.
+
+El objetivo es maximizar la detección futura manteniendo controlados los falsos positivos. Las
+restricciones son los datos tabulares ofuscados, el desbalance 1:27, la ausencia de un identificador
+real de cliente, la memoria limitada de una RTX 2060 de 6 GB y el retraso en la disponibilidad de las
+etiquetas. El protocolo no usa submisiones a Kaggle.
+
+\textbf{Métricas.} Se reportan AUC y PR-AUC para ranking, precision, recall, F1 y balanced accuracy
+para clasificación. Para decisiones se usa un umbral 0,20, costo 1 para falso positivo y costo 10
+para falso negativo. También se reportan tiempo de entrenamiento y PSI.
+
+\section{Diseño del sistema}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{\figdir fig_arquitectura_adaptativa.pdf}
+\caption{Arquitectura del sistema. El monitoreo alimenta la selección de ventana y el reentrenamiento.}
+\end{figure}
+
+El flujo recibe las tablas transaccional y de identidad, valida el orden temporal, calcula variables
+causales, produce un score y lo convierte en una acción: aprobar, enviar a revisión o bloquear. Las
+transacciones y decisiones se registran para medir desempeño y drift. La tabla transaccional describe
+el evento de pago; la tabla de identidad aporta información sobre el dispositivo y la red.
+
+\section{Preparación temporal y features}
+
+Los valores faltantes se conservan como señal; las variables categóricas se codifican con un
+ordinal encoder capaz de manejar categorías nuevas. Se derivan día relativo, hora, día de semana,
+mes calendario y versiones normalizadas de $D4$, $D5$, $D10$, $D11$ y $D15$.
+
+El cliente implícito se aproxima como:
+\[
+ UID = card1 \_ addr1 \_ \lfloor TransactionDT/86400-D1 \rfloor.
+\]
+El UID solo se utiliza como llave. Para cada fila se calculan frecuencia y medias históricas de monto,
+variables temporales y conteos. Durante el entrenamiento se usa la suma acumulada anterior a la fila;
+durante la evaluación se usa únicamente el histórico anterior al bloque. Así se elimina la fuga
+transductiva del benchmark original.
+
+\section{Modelado y protocolo experimental}
+
+Se comparan regresión logística, Random Forest y XGBoost. La comparación auxiliar usa el mismo corte
+temporal de la muestra de desarrollo. El experimento principal usa XGBoost, que fue el modelo con mejor
+resultado en el informe base.
+
+La evaluación adaptativa reserva los primeros 60 días para entrenamiento y evalúa cuatro bloques
+futuros de 30 días. Se comparan:
+
+\begin{itemize}
+  \item histórico expansivo: conserva todos los días anteriores;
+  \item ventana deslizante de 30, 60 o 90 días: olvida observaciones antiguas;
+  \item PSI sobre monto, columnas $D$ y conteos $C$; PSI máximo mayor que 0,20 activa una alarma;
+  \item reentrenamiento por bloque, con posibilidad de cambiar la ventana cuando aumente el costo.
+\end{itemize}
+
+\section{Resultados}
+
+La tabla resume la corrida completa sobre las 590\,540 transacciones de entrenamiento, con XGBoost de
+180 árboles y umbral 0,20.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Promedios de los cuatro bloques futuros.}
+\begin{tabular}{lrrrrr}
+\toprule
+Ventana & AUC & PR-AUC & F1 & Recall & PSI máx.\\
+\midrule
+\rowcolor{mist}
+Expansiva & 0,9163 & 0,5807 & 0,5575 & 0,5131 & 0,0403\\
+30 días   & 0,9039 & 0,5630 & 0,5481 & 0,4786 & 0,0133\\
+\rowcolor{mist}
+60 días   & 0,9139 & 0,5759 & 0,5585 & 0,5045 & 0,0238\\
+90 días   & 0,9156 & 0,5829 & 0,5635 & 0,5151 & 0,0295\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{\figdir fig_adaptacion_metricas.pdf}
+\caption{Evolución temporal de AUC, F1 y PSI. El segundo bloque muestra una degradación del modelo expansivo, aunque el PSI no supera el umbral alto.}
+\end{figure}
+
+La ventana expansiva alcanza el mejor AUC promedio. La ventana de 30 días presenta el peor resultado,
+lo que indica que descartar historia puede eliminar patrones útiles. El rendimiento también cambia entre
+bloques: el AUC expansivo baja de 0,9175 en el primero a 0,9071 en el segundo, mientras el costo de
+decisión sube de 18\,059 a 21\,009. El sistema vigila el PSI y las métricas de desempeño cuando llegan
+las etiquetas retrasadas.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Comparación auxiliar de modelos en el mismo corte temporal de desarrollo.}
+\begin{tabular}{lrrr}
+\toprule
+Modelo & AUC & F1 & Recall\\
+\midrule
+\rowcolor{mist}
+Regresión logística & 0,8022 & 0,0940 & 0,9686\\
+Random Forest & 0,9000 & 0,1588 & 0,9186\\
+\rowcolor{mist}
+XGBoost & 0,9242 & 0,6163 & 0,5831\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Despliegue, riesgos y adaptación}
+
+En un despliegue por lotes diario o mensual, las nuevas transacciones pasan por validación, cálculo de
+features históricas y predicción. El modelo se actualiza al cerrar cada bloque o cuando se detecta
+drift. Los casos cercanos al umbral se envían a revisión humana; el sistema no debe bloquear de forma
+irreversible sin auditoría. La incertidumbre se aproxima mediante la distancia al umbral y puede
+mejorarse con calibración posterior.
+
+Los principales riesgos son la fuga temporal en las agregaciones, los cambios en la cobertura de
+identidad, las nuevas campañas de fraude, el costo desigual de los errores y la degradación silenciosa.
+Para reducirlos se necesitan registros, versionado del modelo, rollback, revisión de alertas y
+evaluación por período.
+
+\section{Conclusiones}
+
+El informe base mostró que la ingeniería de entidades aporta más que cambiar de algoritmo. La extensión
+adaptativa lleva esa evidencia a un flujo operativo: calcula features causales, evalúa bloques futuros y
+compara estrategias de olvido. En esta ejecución, la ventana expansiva supera a la de 30 días. La
+selección de ventana debe apoyarse en métricas de desempeño y costo. El código reproducible se
+encuentra en \texttt{src/adaptive\_fraud.py} y los resultados en
+\texttt{results/adaptive\_results.csv}.
+
+\end{document}

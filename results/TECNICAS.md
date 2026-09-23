@@ -95,3 +95,29 @@ Adaptaciones necesarias en 2026 (documentadas en los scripts):
 2. Ensemble XGB_96 + LGBM_magic (rank average) — el camino del 1er puesto real (0.9459 privado).
 3. Post-procesado por UID sobre el ensemble.
 4. Optimizar `max_depth=12, lr=0.02` con más folds (6 meses completos).
+
+## 11. Sistema adaptativo implementado
+
+El script `src/adaptive_fraud.py` convierte el benchmark en un experimento de adaptación temporal:
+
+- separa 60 días iniciales y bloques futuros de 30 días;
+- compara histórico expansivo contra ventanas deslizantes de 30, 60 y 90 días;
+- calcula agregaciones del `magic UID` usando únicamente el historial anterior;
+- calcula PSI sobre monto, columnas D y conteos C;
+- reporta AUC, PR-AUC, precision, recall, F1, balanced accuracy y costo de decisión;
+- soporta XGBoost, regresión logística y Random Forest.
+
+La corrida completa queda en `results/adaptive_results.csv`. Con XGBoost, 180 árboles y umbral
+0.20, los promedios fueron:
+
+| Ventana | AUC | PR-AUC | F1 | Recall | PSI máximo |
+|---|---:|---:|---:|---:|---:|
+| Expansiva | 0.9163 | 0.5807 | 0.5575 | 0.5131 | 0.0403 |
+| 30 días | 0.9039 | 0.5630 | 0.5481 | 0.4786 | 0.0133 |
+| 60 días | 0.9139 | 0.5759 | 0.5585 | 0.5045 | 0.0238 |
+| 90 días | 0.9156 | 0.5829 | 0.5635 | 0.5151 | 0.0295 |
+
+El resultado no implica que la ventana expansiva sea universalmente óptima: muestra que, en este
+experimento, el olvido agresivo de 30 días pierde señal. El sistema debe seguir monitoreando el
+desempeño por bloque y activar reentrenamiento o cambio de ventana cuando el costo o las métricas
+se deterioren.

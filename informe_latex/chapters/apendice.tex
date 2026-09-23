@@ -7,8 +7,9 @@
 PROYECTO1_PLANIFICA/
 |-- data/raw/                 dataset oficial (CSV) + leaderboard publico
 |-- codigos/
-|   |-- ejecutados/           4 notebooks reproducidos (.ipynb + .py)
-|   |-- descartados/          8 notebooks analizados sin ejecutar
+|   |-- ejecutados/           5 notebooks ejecutados con outputs (.ipynb + .py)
+|   |                         01 baseline CPU, 02 GPU, 03 LightGBM,
+|   |                         04 ablacion magic UID, 05 sistema integrado
 |   `-- _RESUMEN_TECNICAS.md  inventario de tecnicas por notebook
 |-- src/                      benchmarks reproducibles
 |   |-- bench_01_inversion.py baseline XGB CPU
@@ -24,6 +25,7 @@ PROYECTO1_PLANIFICA/
 
 \section{Entorno}
 
+\begin{sloppypar}
 \begin{itemize}
   \item Linux; Python 3.12 en entorno \texttt{uv}; pandas 3.0, XGBoost 3.4,
         LightGBM 4.x, scikit-learn.
@@ -31,6 +33,7 @@ PROYECTO1_PLANIFICA/
   \item Datos: \texttt{kaggle competitions download -c ieee-fraud-detection}
         (requiere aceptar las reglas de la competencia).
 \end{itemize}
+\end{sloppypar}
 
 \section{Ejecución de los experimentos}
 
@@ -49,12 +52,10 @@ tectonic informe_latex/main.tex
 \section{Adaptaciones de versiones (2019 $\to$ 2026)}
 
 \begin{itemize}
-  \item \textbf{XGBoost $\ge$2}: \texttt{tree\_method='gpu\_hist'} se reemplaza por
-        \texttt{tree\_method='hist', device='cuda'}; \texttt{early\_stopping\_rounds} y
-        \texttt{eval\_metric} pasan al constructor del estimador.
-  \item \textbf{LightGBM $\ge$4}: los argumentos \texttt{early\_stopping\_rounds} y
-        \texttt{verbose\_eval} de \texttt{lgb.train} se sustituyen por los
-        \emph{callbacks} \texttt{lgb.early\_stopping()} y \texttt{lgb.log\_evaluation()}.
+  \item \textbf{XGBoost $\ge$2}: \texttt{gpu\_hist} se reemplaza por \texttt{hist} con
+        dispositivo \texttt{cuda}; los parámetros de parada temprana pasan al estimador.
+  \item \textbf{LightGBM $\ge$4}: los argumentos de parada temprana y \texttt{verbose\_eval}
+        de \texttt{lgb.train} se sustituyen por \emph{callbacks}.
   \item \textbf{pandas 3}: las cadenas leídas de CSV adoptan el dtype \texttt{str} (no
         \texttt{object}); las condiciones \texttt{dtype=='object'} deben reemplazarse por
         \texttt{pd.api.types.is\_numeric\_dtype(...)} negado. \texttt{LabelEncoder} se

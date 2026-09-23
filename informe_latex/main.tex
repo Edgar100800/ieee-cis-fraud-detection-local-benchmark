@@ -11,10 +11,12 @@
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{subcaption}
-\usepackage{xcolor}
+\usepackage[table]{xcolor}
 \usepackage{listings}
 \usepackage{microtype}
 \usepackage{csquotes}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
 \usepackage[colorlinks=true,linkcolor=blue!60!black,citecolor=green!40!black,urlcolor=blue!60!black]{hyperref}
 \usepackage[nameinlink,capitalize]{cleveref}
 
@@ -38,6 +40,32 @@
 }
 \lstset{style=py}
 
+% --- sistema visual del informe ---
+\definecolor{ink}{HTML}{13263A}
+\definecolor{teal}{HTML}{0F766E}
+\definecolor{coral}{HTML}{D95B43}
+\definecolor{slate}{HTML}{52606D}
+\definecolor{mist}{HTML}{EEF4F5}
+\color{ink}
+\titleformat{\chapter}[display]
+  {\bfseries\color{ink}}
+  {\filleft\Large\chaptertitlename\ \thechapter}
+  {8pt}
+  {\Huge}
+  [\vspace{5pt}\color{teal}\titlerule]
+\titlespacing*{\chapter}{0pt}{-20pt}{24pt}
+\titleformat{\section}{\Large\bfseries\color{ink}}{\thesection}{0.6em}{}
+  [\vspace{2pt}\color{teal}\titlerule]
+\titlespacing*{\section}{0pt}{14pt}{7pt}
+\titleformat{\subsection}{\large\bfseries\color{teal}}{\thesubsection}{0.6em}{}
+\titlespacing*{\subsection}{0pt}{10pt}{4pt}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\footnotesize\color{slate}IEEE-CIS Fraud Detection}
+\rhead{\footnotesize\color{slate}Sistema adaptativo}
+\cfoot{\footnotesize\color{slate}\thepage}
+\setlength{\headheight}{14pt}
+
 % --- accesos rápidos ---
 \newcommand{\figdir}{figures/}
 \newcommand{\tabdir}{tables/}
@@ -53,20 +81,17 @@
 
 \begin{abstract}
 \noindent
-Este informe documenta la reproducción local y el análisis comparativo de las mejores soluciones
-públicas de la competencia \emph{IEEE-CIS Fraud Detection} (Kaggle, 2019), con el objetivo de
-identificar qué técnicas de tratamiento de datos y qué modelos de clasificación explican el
-rendimiento observado. Se seleccionaron los 12 notebooks públicos con mayor reputación, se
-descargaron sus fuentes y se ejecutaron localmente 4 de ellos (los que producen modelos
-entrenables) sobre el conjunto completo de datos, bajo validación temporal que replica la
-separación train/test de la competencia. El resultado central es una \emph{ablación} controlada:
-con exactamente el mismo modelo (XGBoost, profundidad 12), la construcción de un pseudo-identificador
-de cliente (\emph{magic UID}) y sus $\sim$40 agregaciones por grupo elevan el AUC local de
-0{,}9375 a 0{,}9479 ($+0{,}0104$), mientras que los cambios de algoritmo o de hardware apenas
-movilizan el AUC. Se concluye que, en problemas con distribución temporal no estacionaria,
-la jerarquía de impacto es: (1)~validación honesta, (2)~ingeniería de features orientada a
-entidades, (3)~estabilización temporal de features, y (4)~recién entonces, hiperparámetros y
-arquitectura del modelo. Todos los experimentos son reproducibles con los scripts incluidos.
+Este informe documenta la reproducción local y el análisis comparativo de soluciones públicas de la
+competencia \emph{IEEE-CIS Fraud Detection} (Kaggle, 2019). El estudio busca identificar qué decisiones
+de tratamiento de datos y modelado explican el rendimiento observado. Se seleccionaron 12 notebooks,
+se descargaron sus fuentes y se ejecutaron localmente los 4 que producen modelos entrenables, usando
+el conjunto completo y una validación temporal equivalente a la separación train/test de la competencia.
+La ablación principal mantiene fijo XGBoost, con profundidad 12: al añadir un pseudoidentificador de
+cliente (\emph{magic UID}) y unas 40 agregaciones, el AUC local sube de 0{,}9375 a 0{,}9479
+($+0{,}0104$). El cambio de representación aporta más que cambiar de algoritmo o de hardware.
+Como extensión, se implementó un sistema adaptativo con features causales, ventanas expansivas y
+deslizantes, monitoreo PSI y costos de decisión. Los experimentos se pueden repetir con los scripts
+incluidos.
 \end{abstract}
 
 \tableofcontents
@@ -76,6 +101,7 @@ arquitectura del modelo. Todos los experimentos son reproducibles con los script
 \input{chapters/introduccion}
 \input{chapters/datos}
 \input{chapters/tratamiento}
+\input{chapters/adaptacion}
 \input{chapters/modelos}
 \input{chapters/resultados}
 \input{chapters/discusion}

@@ -4,7 +4,8 @@
 
 ```bash
 cd informe_latex
-tectonic main.tex        # genera main.pdf (28 pag.)
+tectonic main.tex         # genera main.pdf (informe técnico extenso)
+tectonic main_entrega.tex # genera main_entrega.pdf (versión de entrega, <=8 pag.)
 # alternativo: xelatex main.tex (x2 para referencias cruzadas)
 ```
 
@@ -20,11 +21,24 @@ resultados reales del proyecto:
 .venv/bin/python informe_latex/scripts/generar_graficos.py
 ```
 
-- Figuras → `figures/*.pdf` (12)
+- Figuras → `figures/*.pdf` (incluye arquitectura, métricas e infografía adaptativas)
 - Tablas → `tables/tabla_datos.tex`, `tables/tabla_ranking.tex`
 
 Si se re-ejecutan los benchmarks (`src/bench_0*.py`), correr de nuevo el
 script de gráficos y recompilar para actualizar el informe.
+
+La extensión adaptativa se ejecuta con:
+
+```bash
+cd ..
+.venv/bin/python src/adaptive_fraud.py --windows expanding,30,60,90 \
+  --initial-days 60 --eval-days 30 --model xgboost --device cuda
+.venv/bin/python informe_latex/scripts/generar_adaptacion.py
+.venv/bin/python informe_latex/scripts/generar_infografia.py
+```
+
+Los resultados quedan en `results/adaptive_results.csv` y las figuras en `figures/`.
+La infografía final es `figures/infografia_sistema_adaptativo.pdf`.
 
 ## Estructura
 

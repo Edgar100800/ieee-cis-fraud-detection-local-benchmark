@@ -5,15 +5,15 @@
 
 El fraude en pagos \emph{card-not-present} (CNP) genera pérdidas anuales de miles de millones de
 dólares y plantea un problema de clasificación binaria particular: el conjunto de datos está
-fuertemente desbalanceado (alrededor del 3{,}5\,\% de transacciones fraudulentas), las features
-son en su mayoría anónimas o ofuscadas por razones comerciales, y ---lo más importante---
-\emph{el futuro no se parece al pasado}: los patrones de ataque cambian, por lo que un modelo que
+fuertemente desbalanceado (alrededor del 3{,}5\,\% de transacciones fraudulentas), y las features
+son en su mayoría anónimas o están ofuscadas por razones comerciales. El futuro tampoco se parece al
+pasado: los patrones de ataque cambian, por lo que un modelo que
 sobreajusta el período de entrenamiento degrada rápidamente su desempeño en producción.
 
 La competencia \emph{IEEE-CIS Fraud Detection}~\cite{ieee-cis} (Kaggle, 2019), organizada por la
 IEEE Computational Intelligence Society junto a Vesta Corporation, formalizó este problema sobre
 transacciones reales de comercio electrónico. Contó con 6\,355 equipos participantes y consolidó
-un cuerpo público de soluciones de altísima calidad, entre las que destaca la técnica del
+un cuerpo público de soluciones, entre las que destaca la técnica del
 \emph{magic UID} de Chris Deotte y Konstantin Yakovlev (equipo \emph{FraudSquad}, 2.\textsuperscript{o}
 en el tablero público y 1.\textsuperscript{o} en el privado).
 

@@ -1,0 +1,2 @@
+period,eval_start_day,eval_end_day,window,model,train_rows,eval_rows,fit_seconds,threshold,mean_psi,max_psi,drift_detected,auc,pr_auc,precision,recall,f1,balanced_accuracy,false_positives,false_negatives,decision_cost,decision_utility,true_positives,true_negatives
+1,60.0,84.8221216665039,expanding,xgboost,223738,76261,2.3777451515197754,0.2,0.018156326542057784,0.034508119971695325,False,0.9241605968792912,0.6529063326016596,0.6535008976660682,0.5831464274271067,0.6163223840162546,0.7849762763331869,965,1301,13975.0,-13975.0,1820,72175

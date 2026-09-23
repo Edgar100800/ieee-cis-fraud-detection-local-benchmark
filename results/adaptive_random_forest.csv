@@ -1,0 +1,2 @@
+period,eval_start_day,eval_end_day,window,model,train_rows,eval_rows,fit_seconds,threshold,mean_psi,max_psi,drift_detected,auc,pr_auc,precision,recall,f1,balanced_accuracy,false_positives,false_negatives,decision_cost,decision_utility,true_positives,true_negatives
+1,60.0,84.8221216665039,expanding,random_forest,223738,76261,6.467244386672974,0.2,0.018156326542057784,0.034508119971695325,False,0.9000087768893267,0.5562345685500627,0.08693938199351063,0.9186158282601731,0.15884536539420466,0.7534697954535757,30110,254,32650.0,-32650.0,2867,43030
