@@ -58,7 +58,7 @@ Hardware: 16 núcleos CPU + NVIDIA RTX 2060 (6 GB). La GPU acelera 4.4× sin alt
 ├── src/                benchmarks y evaluación adaptativa
 ├── results/            CSV de resultados, ranking y técnicas (TECNICAS.md)
 ├── informe_latex/      informe largo, entrega <=8 páginas, figuras e infografía
-├── presentacion/       presentación final editable (.pptx)
+├── presentacion/       presentación Beamer (.tex + PDF), figuras Python y versión .pptx
 └── data/               (vacío en el repo: descargar de Kaggle, ver abajo)
 ```
 
@@ -79,18 +79,21 @@ unzip 'data/raw/ieee-fraud-detection.zip' -d data/raw
 .venv/bin/python src/bench_03_nroman.py       # LightGBM (= notebook 03)
 .venv/bin/python src/bench_04_cdeotte.py      # ablación magic UID (= notebook 04)
 
-# 5. evaluación adaptativa por bloques temporales
+# 4. evaluación adaptativa por bloques temporales
 .venv/bin/python src/adaptive_fraud.py \
   --windows expanding,30,60,90 --initial-days 60 --eval-days 30 \
   --model xgboost --device cuda --n-estimators 180
 
-# 6. informe (figuras + PDF)
+# 5. informe (figuras + PDF)
 .venv/bin/python informe_latex/scripts/generar_graficos.py
 .venv/bin/python informe_latex/scripts/generar_adaptacion.py
 cd informe_latex && tectonic main.tex
 # versión corta para entregar: main_entrega.pdf (3 páginas)
 # infografía: figures/infografia_sistema_adaptativo.pdf
-# presentación: presentacion/planifica_presentacion.pptx
+# 6. presentación Beamer (figuras 16:9 + PDF)
+.venv/bin/python presentacion/generar_figuras.py
+(cd presentacion && tectonic planifica_presentacion.tex)
+# salida: presentacion/planifica_presentacion.pdf (10 páginas, 9 + apéndice)
 ```
 
 Los gráficos del informe se regeneran desde `data/raw` y `results/`: si cambias los

@@ -1,0 +1,3 @@
+model,holdout_auc,oof_auc,fit_seconds,seed
+XGBoost d12 sin UID,0.9340,0.9347,155,42
+XGBoost d12 + magic UID,0.9456,0.9509,168,42
