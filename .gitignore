@@ -36,3 +36,6 @@ ieee_cis_fraud_detection_v2.csv
 feature_importances.csv
 oof_xgb_95.csv
 oof_xgb_96.csv
+
+# artefacto de entrega compartible (regenerable)
+entrega_planifica.zip
