@@ -57,6 +57,50 @@ señal y no compensó el drift moderado observado. El AUC expansivo bajó de $0,
 a $0,9071$ en el segundo, y el costo de decisión subió de 18\,059 a 21\,009 unidades. Por eso el
 sistema monitorea el desempeño aunque el PSI no active una alarma fuerte.
 
+\section{El costo de la causalidad, medido en el holdout}
+\label{sec:costo-causalidad}
+
+\begin{sloppypar}
+La brecha transductiva señalada en \cref{sec:limites} quedó cuantificada con el script
+\texttt{src/eval\_05\_integrated.py}, que evalúa el sistema integrado del notebook 05 en dos variantes
+y registra cada una en su CSV. La variante \emph{protocolo} replica el notebook y añade métricas de
+decisión: reproduce sus AUC ($0{,}9340/0{,}9456$ en holdout y $0{,}9347/0{,}9509$ en OOF, sin y con
+magic UID) y mide recall, precisión y F1 en los umbrales 0,50 y 0,19, además del umbral
+$\tau^{*}=0{,}176$ que maximiza F1 en el OOF ($0{,}6631$, in-sample del umbral).
+\end{sloppypar}
+
+La variante \emph{causal} separa tres fases: entrenamiento en $[0\%,60\%)$, calibración del umbral en
+$[60\%,75\%)$ y evaluación en el futuro $[75\%,100\%]$. Categorías, frecuencias y agregaciones del UID
+se calculan solo con transacciones anteriores a cada corte. El AUC del holdout baja de $0{,}9456$ a
+$0{,}9175$ ($-0{,}028$): la distancia entre el límite superior transductivo y lo que un despliegue
+estricto obtendría.
+
+\begin{table}[ht]
+  \centering
+  \small
+  \caption{Sistema integrado 05 + magic UID, holdout causal 75/25: métricas de decisión por umbral
+           (\texttt{results/threshold\_metrics\_05\_causal.csv}). El umbral $\tau^{*}$ se calibró por
+           F1 en el bloque $[60\%,75\%)$ sin usar información futura.}
+  \label{tab:causal-umbral}
+  \begin{tabular}{lrrr}
+    \toprule
+    Umbral & Recall & Precisión & F1\\
+    \midrule
+    \rowcolor{mist}
+    0,50 & 0,3218 & 0,9308 & 0,4782\\
+    0,19 & 0,4200 & 0,8903 & 0,5707\\
+    \rowcolor{mist}
+    $\tau^{*}=0{,}108$ & \textbf{0,4602} & 0,8651 & \textbf{0,6008}\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+El \cref{tab:causal-umbral} muestra el compromiso operativo. Con umbral fijo 0,19, la variante causal
+recupera menos fraude que la transductiva (recall $0{,}4200$ frente a $0{,}5586$ en el holdout
+comparable); la calibración recupera parte de esa pérdida sin mirar el futuro y sostiene F1 $0{,}60$
+en el bloque posterior. La conclusión operativa es doble: el AUC transductivo es un límite superior, y
+el umbral debe recalibrarse en cada bloque con datos pasados.
+
 \section{Decisión y adaptación operativa}
 
 El score se transforma en una acción con tres estados: aprobar, enviar a revisión o bloquear. El

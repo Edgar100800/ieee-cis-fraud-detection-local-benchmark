@@ -35,9 +35,13 @@ cd ..
   --initial-days 60 --eval-days 30 --model xgboost --device cuda
 .venv/bin/python informe_latex/scripts/generar_adaptacion.py
 .venv/bin/python informe_latex/scripts/generar_infografia.py
+# métricas de decisión y variante causal del sistema integrado 05
+.venv/bin/python src/eval_05_integrated.py --experiment all
 ```
 
-Los resultados quedan en `results/adaptive_results.csv` y las figuras en `figures/`.
+Los resultados quedan en `results/adaptive_results.csv`,
+`results/threshold_metrics_05_integrated.csv` y `results/threshold_metrics_05_causal.csv`;
+las figuras en `figures/`.
 La infografía final es `figures/infografia_sistema_adaptativo.pdf`.
 
 ## Estructura

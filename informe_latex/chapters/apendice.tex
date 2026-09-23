@@ -16,6 +16,8 @@ PROYECTO1_PLANIFICA/
 |   |-- bench_02_xhlulu.py    baseline XGB GPU
 |   |-- bench_03_nroman.py    LightGBM + FE (TimeSeriesSplit)
 |   |-- bench_04_cdeotte.py   XGB d12 con/sin magic UID
+|   |-- adaptive_fraud.py     evaluacion adaptativa por bloques
+|   |-- eval_05_integrated.py metricas de decision + causal
 |   |-- download_notebooks.py descarga via API publica de Kaggle
 |   |-- extract_notebooks.py  exportacion .ipynb -> .py
 |   `-- make_ranking.py       consolidacion de resultados
@@ -45,6 +47,9 @@ uv pip install matplotlib
 .venv/bin/python src/bench_02_xhlulu.py        # AUC 0.9227,  25 s (GPU)
 .venv/bin/python src/bench_03_nroman.py        # AUC 0.9200, 462 s
 .venv/bin/python src/bench_04_cdeotte.py       # 0.9375 -> 0.9479 (GPU)
+.venv/bin/python src/adaptive_fraud.py --windows expanding,30,60,90 \
+    --initial-days 60 --eval-days 30 --model xgboost --device cuda
+.venv/bin/python src/eval_05_integrated.py --experiment all  # umbrales + causal
 .venv/bin/python informe_latex/scripts/generar_graficos.py
 tectonic informe_latex/main.tex
 \end{verbatim}

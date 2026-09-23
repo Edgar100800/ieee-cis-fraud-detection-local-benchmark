@@ -162,6 +162,31 @@ XGBoost & 0,9242 & 0,6163 & 0,5831\\
 \end{tabular}
 \end{table}
 
+\paragraph{El costo de la causalidad, medido.} El script \texttt{src/eval\_05\_integrated.py}
+cuantificó la brecha transductiva sobre el sistema integrado del notebook 05. La variante protocolo
+reproduce sus AUC (0,9340/0,9456 en holdout, 0,9347/0,9509 en OOF) y añade métricas de decisión en
+umbrales 0,50, 0,19 y calibrado. La variante causal calcula las agregaciones del UID solo con el
+pasado: entrenamiento en $[0\%,60\%)$, calibración en $[60\%,75\%)$ y evaluación en el futuro; el AUC
+del holdout baja de 0,9456 a 0,9175. El umbral calibrado $\tau^{*}=0{,}108$ sostiene F1 0,60 en el
+bloque futuro.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Sistema integrado 05 + magic UID, holdout causal 75/25 (\texttt{results/threshold\_metrics\_05\_causal.csv}).}
+\begin{tabular}{lrrr}
+\toprule
+Umbral & Recall & Precisión & F1\\
+\midrule
+\rowcolor{mist}
+0,50 & 0,3218 & 0,9308 & 0,4782\\
+0,19 & 0,4200 & 0,8903 & 0,5707\\
+\rowcolor{mist}
+$\tau^{*}=0{,}108$ (calibrado) & \textbf{0,4602} & 0,8651 & \textbf{0,6008}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \section{Despliegue, riesgos y adaptación}
 
 En un despliegue por lotes diario o mensual, las nuevas transacciones pasan por validación, cálculo de
@@ -177,11 +202,16 @@ evaluación por período.
 
 \section{Conclusiones}
 
+\begin{sloppypar}
 El informe base mostró que la ingeniería de entidades aporta más que cambiar de algoritmo. La extensión
 adaptativa lleva esa evidencia a un flujo operativo: calcula features causales, evalúa bloques futuros y
 compara estrategias de olvido. En esta ejecución, la ventana expansiva supera a la de 30 días. La
-selección de ventana debe apoyarse en métricas de desempeño y costo. El código reproducible se
-encuentra en \texttt{src/adaptive\_fraud.py} y los resultados en
-\texttt{results/adaptive\_results.csv}.
+selección de ventana debe apoyarse en métricas de desempeño y costo, y el umbral conviene recalibrarlo
+por bloque sin usar el futuro: en el sistema integrado, la variante causal del holdout costó 0,028 de
+AUC y sostuvo F1 0,60 con $\tau^{*}=0{,}108$. El código reproducible se encuentra en
+\texttt{src/adaptive\_fraud.py} y \texttt{src/eval\_05\_integrated.py}; los resultados, en
+\texttt{results/adaptive\_results.csv}, \texttt{results/threshold\_metrics\_05\_integrated.csv} y
+\texttt{results/threshold\_metrics\_05\_causal.csv}.
+\end{sloppypar}
 
 \end{document}

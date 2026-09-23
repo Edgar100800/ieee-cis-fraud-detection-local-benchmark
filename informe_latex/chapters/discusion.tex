@@ -64,8 +64,9 @@ Los experimentos permiten ordenar los factores por su contribución al AUC:
   \item \textbf{Protocolo transductivo}: las agregaciones por UID se computan sobre todo el
         período de entrenamiento, incluidos los meses usados como validación (sin usar sus
         etiquetas). El AUC local absoluto es, por tanto, un límite superior respecto de un
-        sistema causal estricto. La variante estricta (estadísticas solo con transacciones
-        anteriores a cada transacción) es el siguiente hito propuesto.
+        sistema causal estricto. Esa brecha dejó de ser hipotética: en el sistema integrado del
+        notebook 05, la variante estricta midió $0{,}9175$ frente a $0{,}9456$ del protocolo
+        original (\cref{sec:costo-causalidad}).
   \item \textbf{Un solo grano de validación para los XGB d12}: GroupKFold de 3 meses (6 en el
         original) por restricciones de tiempo de GPU; las diferencias entre folds fueron
         pequeñas y consistentes en dirección.
@@ -75,7 +76,8 @@ Los experimentos permiten ordenar los factores por su contribución al AUC:
         medición local.
   \item \textbf{Métrica única}: el AUC ordena bien pero no responde por costos asimétricos de
         negocio (falso positivo bloquea un pago legítimo); un despliegue real requiere umbral y
-        métrica de utilidad propios.
+        métrica de utilidad propios. La medición de umbrales fijos y calibrados del sistema
+        integrado cubre parte de esa falta (\cref{sec:costo-causalidad}).
 \end{enumerate}
 
 \section{Amenazas a la validez}
