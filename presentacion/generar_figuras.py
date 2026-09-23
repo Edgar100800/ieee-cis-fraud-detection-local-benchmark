@@ -29,6 +29,10 @@ SLATE = "#52606D"
 MIST = "#EEF4F5"
 BLUE = "#4C78A8"
 LIGHT_BLUE = "#9BB7D4"
+TINT_SLATE = "#E8EEF2"
+TINT_TEAL = "#D9E8E6"
+TINT_TEAL_SOFT = "#E4EEEC"
+TINT_INK = "#E2E8EC"
 
 plt.rcParams.update(
     {
@@ -199,13 +203,13 @@ def uid_diagrama() -> None:
     ax.set_ylim(0, 4.4)
     ax.axis("off")
 
-    _box(ax, 0.2, 2.65, 2.3, 1.0, "card1 + addr1\ntarjeta + dirección", "#DCEEF2", 13)
-    _box(ax, 0.2, 1.1, 2.3, 1.0, "floor(día − D1)\nfecha de alta", "#DCEEF2", 13)
-    _box(ax, 3.35, 1.75, 2.1, 1.15, "UID\npseudo-cliente", "#F9F0C7", 15)
-    _box(ax, 6.3, 3.0, 2.6, 0.78, "Frecuencia (FE)", "#DCEBD8", 13)
-    _box(ax, 6.3, 1.85, 2.6, 0.78, "Media / std (AG)", "#DCEBD8", 13)
-    _box(ax, 6.3, 0.7, 2.6, 0.78, "Cardinalidad (AG2)", "#DCEBD8", 13)
-    _box(ax, 10.0, 1.6, 2.8, 1.25, "XGBoost d12\nsolo agregaciones", "#FBE4D5", 15)
+    _box(ax, 0.2, 2.65, 2.3, 1.0, "card1 + addr1\ntarjeta + dirección", TINT_SLATE, 13, edge=SLATE)
+    _box(ax, 0.2, 1.1, 2.3, 1.0, "floor(día − D1)\nfecha de alta", TINT_SLATE, 13, edge=SLATE)
+    _box(ax, 3.35, 1.75, 2.1, 1.15, "UID\npseudo-cliente", TINT_TEAL, 15, edge=TEAL)
+    _box(ax, 6.3, 3.0, 2.6, 0.78, "Frecuencia (FE)", TINT_TEAL_SOFT, 13, edge=SLATE)
+    _box(ax, 6.3, 1.85, 2.6, 0.78, "Media / std (AG)", TINT_TEAL_SOFT, 13, edge=SLATE)
+    _box(ax, 6.3, 0.7, 2.6, 0.78, "Cardinalidad (AG2)", TINT_TEAL_SOFT, 13, edge=SLATE)
+    _box(ax, 10.0, 1.6, 2.8, 1.25, "XGBoost d12\nsolo agregaciones", TINT_INK, 15, edge=INK)
 
     _arrow(ax, (2.5, 3.15), (3.35, 2.55))
     _arrow(ax, (2.5, 1.6), (3.35, 2.05))
@@ -226,9 +230,9 @@ def pipeline_operativo() -> None:
     ax.set_ylim(0, 4.5)
     ax.axis("off")
 
-    _box(ax, 0.3, 1.8, 3.35, 1.65, "1 · PREDICCIÓN\nDatos → features causales → XGBoost", "#DCEEF2", 14)
-    _box(ax, 4.85, 1.8, 3.35, 1.65, "2 · DECISIÓN\nScore → umbral → acción", "#F9F0C7", 14)
-    _box(ax, 9.4, 1.8, 3.35, 1.65, "3 · MONITOREO\nRecall + PSI + costo", "#DCEBD8", 14)
+    _box(ax, 0.3, 1.8, 3.35, 1.65, "1 · PREDICCIÓN\nDatos → features causales → XGBoost", TINT_SLATE, 14, edge=SLATE)
+    _box(ax, 4.85, 1.8, 3.35, 1.65, "2 · DECISIÓN\nScore → umbral → acción", TINT_TEAL, 14, edge=TEAL)
+    _box(ax, 9.4, 1.8, 3.35, 1.65, "3 · MONITOREO\nRecall + PSI + costo", TINT_TEAL_SOFT, 14, edge=SLATE)
     _arrow(ax, (3.65, 2.62), (4.85, 2.62), TEAL)
     _arrow(ax, (8.2, 2.62), (9.4, 2.62), TEAL)
     _arrow(ax, (11.05, 1.8), (2.0, 1.18), CORAL, "arc3,rad=0.22")
@@ -268,12 +272,13 @@ def tradeoff_umbral() -> None:
     ax.legend(frameon=False, ncol=3, loc="upper center")
     ax.annotate(
         "+13,3 pp de recall",
-        xy=(1, float(df.loc[1, "recall"])),
-        xytext=(0.55, 0.70),
-        arrowprops={"arrowstyle": "->", "color": CORAL, "linewidth": 1.6},
+        xy=(1, 0.665),
+        xytext=(1, 0.855),
+        arrowprops={"arrowstyle": "->", "color": CORAL, "linewidth": 1.8},
         color=CORAL,
         fontsize=13,
         weight="bold",
+        ha="center",
     )
     fig.tight_layout()
     save(fig, "tradeoff_umbral")
@@ -301,9 +306,9 @@ def protocolo_temporal() -> None:
     ax.add_patch(Rectangle((eval_start, 0), eval_end - eval_start, 3.62, facecolor="#F2D7DF", edgecolor=CORAL, linewidth=1.8))
     ax.text(165, 1.8, "Bloque futuro\n30 días", ha="center", va="center", fontsize=15, weight="bold", color=CORAL)
     ax.axvline(60, color=SLATE, linestyle="--", linewidth=1.4)
-    ax.text(60, 4.35, "histórico inicial mínimo: 60 días", ha="center", fontsize=13, color=SLATE, weight="bold")
-    ax.text(75, 3.92, "entrenamiento: solo pasado", ha="center", fontsize=13, color=TEAL, weight="bold")
-    ax.text(150, 3.92, "corte temporal", ha="center", fontsize=13, color=CORAL, weight="bold")
+    ax.text(60, 4.75, "histórico inicial mínimo: 60 días", ha="center", fontsize=13, color=SLATE, weight="bold")
+    ax.text(75, 4.28, "entrenamiento: solo pasado", ha="center", fontsize=13, color=TEAL, weight="bold")
+    ax.text(150, 3.86, "corte temporal", ha="center", fontsize=13, color=CORAL, weight="bold")
     ax.set_xticks(np.arange(0, 181, 30))
     fig.tight_layout()
     save(fig, "protocolo_temporal")
@@ -329,14 +334,14 @@ def auc_adaptativo() -> None:
     ax.axvspan(1.82, 2.18, color=CORAL, alpha=0.08)
     ax.annotate("caída común en bloque 2", xy=(2, 0.907), xytext=(2.35, 0.896), arrowprops={"arrowstyle": "->", "color": CORAL}, color=CORAL, fontsize=12, weight="bold")
     ax.set_xlim(0.85, 4.15)
-    ax.set_ylim(0.89, 0.925)
+    ax.set_ylim(0.888, 0.935)
     ax.set_xticks([1, 2, 3, 4])
     ax.set_xlabel("bloque futuro")
     ax.set_ylabel("AUC")
     ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: decimal(y, 3)))
     ax.grid(axis="y", alpha=0.2)
     ax.spines[["top", "right"]].set_visible(False)
-    ax.legend(frameon=False, ncol=2, loc="lower right", fontsize=11)
+    ax.legend(frameon=False, ncol=2, loc="upper center", fontsize=12, columnspacing=1.4)
     fig.tight_layout()
     save(fig, "auc_adaptativo")
 

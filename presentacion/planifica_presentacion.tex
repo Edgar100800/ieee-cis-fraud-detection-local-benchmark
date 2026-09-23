@@ -15,15 +15,19 @@
 \definecolor{coral}{HTML}{D95B43}
 \definecolor{slate}{HTML}{52606D}
 \definecolor{mist}{HTML}{EEF4F5}
+\definecolor{tintteal}{HTML}{E1EDEA}
+\definecolor{tintcoral}{HTML}{FAE8E2}
+\definecolor{coraldark}{HTML}{B04A33}
 
 \setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{blocks}[rounded][shadow=false]
 \setbeamercolor{background canvas}{bg=white}
 \setbeamercolor{frametitle}{bg=ink,fg=white}
 \setbeamercolor{title}{fg=ink}
-\setbeamercolor{block title}{bg=teal,fg=white}
-\setbeamercolor{block body}{bg=mist,fg=ink}
-\setbeamercolor{block title alerted}{bg=coral,fg=white}
-\setbeamercolor{block body alerted}{bg=mist,fg=ink}
+\setbeamercolor{block title}{bg=tintteal,fg=teal}
+\setbeamercolor{block body}{bg=tintteal,fg=ink}
+\setbeamercolor{block title alerted}{bg=tintcoral,fg=coraldark}
+\setbeamercolor{block body alerted}{bg=tintcoral,fg=ink}
 \setbeamerfont{frametitle}{series=\bfseries,size=\large}
 \setbeamerfont{block title}{series=\bfseries,size=\normalsize}
 
@@ -50,24 +54,23 @@
 
 % 1 --------------------------------------------------------------------------
 \begin{frame}
-  \vspace{0.3em}
-  {\scriptsize\color{coral}\bfseries PROYECTO 1}\\[0.2em]
-  {\color{ink}\Huge\bfseries Sistema inteligente adaptativo\\[0.15em] para detección de fraude}\\[0.45em]
-  {\color{slate}\large IEEE-CIS Fraud Detection · datos no estacionarios}\\[0.15em]
-  {\color{slate}Validación temporal, contexto de entidad y monitoreo operativo}
-  \vspace{0.9em}
-
-  \begin{center}
-    \begin{tabular}{ccc}
-      {\color{teal}\bfseries DATOS} & {\color{teal}\bfseries MODELO} & {\color{teal}\bfseries ADAPTACIÓN}\\
-      orden temporal & score de fraude & PSI + ventanas\\
-    \end{tabular}
-    \vspace{0.5em}
-
-    \colorbox{mist}{\parbox{0.78\textwidth}{\centering
-      \color{ink}\bfseries 590\,540 transacciones \quad · \quad +0,0116 AUC con magic UID \quad · \quad 4 ventanas temporales}}
-  \end{center}
+  {\scriptsize\color{coral}\bfseries PROYECTO 1 · PLANIFICACIÓN Y TOMA DE DECISIONES EN IA}\par\vspace{0.25em}
+  {\color{ink}\Huge\bfseries Sistema inteligente adaptativo\\[0.08em] para detección de fraude}\\[0.35em]
+  {\color{teal}\rule{1.4cm}{3pt}}\\[0.35em]
+  {\color{slate}\large IEEE-CIS Fraud Detection · datos no estacionarios}
   \vfill
+  \begin{tabularx}{\textwidth}{@{} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X @{}}
+    {\color{teal}\bfseries DATOS} & {\color{teal}\bfseries MODELO} & {\color{teal}\bfseries ADAPTACIÓN}\\[0.1em]
+    orden temporal & score de fraude & PSI + ventanas\\
+  \end{tabularx}
+  \vspace{0.35em}
+  \colorbox{tintteal}{\parbox{\dimexpr\textwidth-2\fboxsep\relax}{\vspace{0.15em}
+    \begin{tabularx}{\dimexpr\textwidth-2\fboxsep\relax}{@{} X !{\hspace{0.6em}\vrule width 0.5pt\hspace{0.6em}} X !{\hspace{0.6em}\vrule width 0.5pt\hspace{0.6em}} X @{}}
+      {\large\bfseries\color{ink}590\,540} & {\large\bfseries\color{ink}+0,0116 AUC} & {\large\bfseries\color{ink}4 ventanas}\\[0.02em]
+      {\scriptsize\color{slate}transacciones} & {\scriptsize\color{slate}ganancia con magic UID} & {\scriptsize\color{slate}temporales de evaluación}\\
+    \end{tabularx}\vspace{0.15em}}}
+  \vspace{0.25em}
+
   {\color{slate}Edgar Chambilla · Septiembre 2026}
 \end{frame}
 
@@ -76,9 +79,9 @@
   \framesubtitle{El modelo debe reconocer fraude en transacciones posteriores al período de entrenamiento}
   \begin{columns}[T]
     \begin{column}{0.34\textwidth}
-      \statcard{transacciones de entrenamiento}{mist}{\color{ink}590\,540}
+      \statcard{transacciones de entrenamiento}{tintteal}{\color{ink}590\,540}
       \vspace{0.25em}
-      \statcard{fraudes · desbalance 1:27}{mist}{\color{coral}3,50\%}
+      \statcard{fraudes · desbalance 1:27}{tintteal}{\color{coral}3,50\%}
       \vspace{0.4em}
       \begin{alertblock}{Consecuencia del desbalance}
         \small Un modelo que siempre prediga ``no fraude'' tendría accuracy alta y no detectaría ningún caso fraudulento.
@@ -102,8 +105,8 @@
 \begin{frame}{Cómo leer las métricas}
   \framesubtitle{Cada métrica responde una pregunta distinta; el desbalance impide resumir todo con accuracy}
   \scriptsize
-  \renewcommand{\arraystretch}{1.05}
-  \begin{tabularx}{\textwidth}{>{\bfseries\color{teal}}p{0.15\textwidth} X p{0.30\textwidth}}
+  \renewcommand{\arraystretch}{1.18}
+  \begin{tabularx}{\textwidth}{>{\bfseries\color{teal}\raggedright\arraybackslash}p{0.15\textwidth} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{0.30\textwidth}}
     \toprule
     \color{ink}Término & \color{ink}\textbf{Qué significa} & \color{ink}\textbf{Cómo se lee aquí}\\
     \midrule
@@ -124,8 +127,8 @@
     \begin{column}{0.49\textwidth}
       \begin{block}{Validación temporal}
         \scriptsize
-        \renewcommand{\arraystretch}{1.05}
-        \begin{tabularx}{\textwidth}{>{\bfseries\color{teal}}p{0.28\textwidth} X}
+        \renewcommand{\arraystretch}{0.93}
+        \begin{tabularx}{\textwidth}{>{\bfseries\color{teal}\raggedright\arraybackslash}p{0.28\textwidth} >{\raggedright\arraybackslash}X}
           Holdout & Entrena con el primer 75\% y evalúa en el 25\% posterior.\\
           OOF & Cada fila se predice con un modelo que no la usó para entrenar.\\
           GroupKFold mensual & Mantiene cada mes completo dentro de un fold.\\
@@ -139,8 +142,8 @@
     \begin{column}{0.47\textwidth}
       \begin{block}{Herramientas y motivo de uso}
         \scriptsize
-        \renewcommand{\arraystretch}{1.08}
-        \begin{tabularx}{\textwidth}{>{\bfseries\color{teal}}p{0.27\textwidth} X}
+        \renewcommand{\arraystretch}{0.93}
+        \begin{tabularx}{\textwidth}{>{\bfseries\color{teal}\raggedright\arraybackslash}p{0.27\textwidth} >{\raggedright\arraybackslash}X}
           pandas / NumPy & Carga, unión y transformación reproducible de los CSV.\\
           XGBoost & Modelo tabular capaz de aprender relaciones no lineales y usar GPU.\\
           LightGBM & Alternativa eficiente para comparar algoritmo e ingeniería de datos.\\
@@ -182,9 +185,9 @@
       \begin{block}{Lectura de la gráfica}
         \footnotesize La GPU redujo tiempo, pero los dos baselines quedaron cerca en AUC. El salto aparece con XGBoost d12 y aumenta al agregar historial por UID.
       \end{block}
-      \statcard{mejor AUC local}{mist}{\color{teal}0,9479}
+      \statcard{mejor AUC local}{tintteal}{\color{teal}0,9479}
       \vspace{0.2em}
-      \statcard{ganancia magic UID}{mist}{\color{teal}+0,0104}
+      \statcard{ganancia magic UID}{tintteal}{\color{teal}+0,0104}
     \end{column}
   \end{columns}
 \end{frame}
