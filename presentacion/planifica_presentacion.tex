@@ -56,25 +56,49 @@
 \begin{frame}
   {\scriptsize\color{coral}\bfseries PROYECTO 1 · PLANIFICACIÓN Y TOMA DE DECISIONES EN IA}\par\vspace{0.25em}
   {\color{ink}\Huge\bfseries Sistema inteligente adaptativo\\[0.08em] para detección de fraude}\\[0.35em]
-  {\color{teal}\rule{1.4cm}{3pt}}\\[0.35em]
-  {\color{slate}\large IEEE-CIS Fraud Detection · datos no estacionarios}
+  {\color{teal}\rule{1.4cm}{3pt}}\\[0.2em]
+  {\color{slate}\large IEEE-CIS Fraud Detection · datos no estacionarios · Septiembre 2026}
   \vfill
-  \begin{tabularx}{\textwidth}{@{} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X @{}}
-    {\color{teal}\bfseries DATOS} & {\color{teal}\bfseries MODELO} & {\color{teal}\bfseries ADAPTACIÓN}\\[0.1em]
-    orden temporal & score de fraude & PSI + ventanas\\
-  \end{tabularx}
-  \vspace{0.35em}
   \colorbox{tintteal}{\parbox{\dimexpr\textwidth-2\fboxsep\relax}{\vspace{0.15em}
     \begin{tabularx}{\dimexpr\textwidth-2\fboxsep\relax}{@{} X !{\hspace{0.6em}\vrule width 0.5pt\hspace{0.6em}} X !{\hspace{0.6em}\vrule width 0.5pt\hspace{0.6em}} X @{}}
       {\large\bfseries\color{ink}590\,540} & {\large\bfseries\color{ink}+0,0116 AUC} & {\large\bfseries\color{ink}4 ventanas}\\[0.02em]
       {\scriptsize\color{slate}transacciones} & {\scriptsize\color{slate}ganancia con magic UID} & {\scriptsize\color{slate}temporales de evaluación}\\
     \end{tabularx}\vspace{0.15em}}}
-  \vspace{0.25em}
-
-  {\color{slate}Edgar Chambilla · Septiembre 2026}
+  \vspace{0.15em}
+  \begin{tabularx}{\textwidth}{@{} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{0.32\textwidth} @{}}
+    {\scriptsize\color{teal}\bfseries EQUIPO} & {\scriptsize\color{teal}\bfseries PROFESORES}\\[0.2em]
+    {\scriptsize\color{ink}Chambilla Mamani · Osnayo Matos · Romero Padilla · Torres Ramos · Wong Orrillo} &
+    {\scriptsize\color{ink}Dra.\ Auras Soariane Vargas\newline Mg.\ Robert Buleje Del-Carpio}\\
+  \end{tabularx}
 \end{frame}
 
 % 2 --------------------------------------------------------------------------
+\begin{frame}{Equipo}
+  \framesubtitle{Quiénes desarrollaron el sistema y quiénes lo guiaron}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{block}{Integrantes}
+        \small
+        Edgar Moisés Chambilla Mamani\newline
+        José Joaquín Osnayo Matos\newline
+        Luis Anthony Romero Padilla\newline
+        André Martin Benjamin Torres Ramos\newline
+        José Francisco Wong Orrillo
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{block}{Profesores}
+        \small
+        Dra.\ Auras Soariane Vargas\newline
+        Mg.\ Robert Buleje Del-Carpio
+      \end{block}
+      \vfill
+      \centering\color{slate}Septiembre 2026\par
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 3 --------------------------------------------------------------------------
 \begin{frame}{Qué problema resolvemos}
   \framesubtitle{El modelo debe reconocer fraude en transacciones posteriores al período de entrenamiento}
   \begin{columns}[T]
@@ -101,7 +125,7 @@
   \end{columns}
 \end{frame}
 
-% 3 --------------------------------------------------------------------------
+% 4 --------------------------------------------------------------------------
 \begin{frame}{Qué limita el sistema}
   \framesubtitle{Restricciones de datos, operación, recursos y decisiones que el sistema no puede tomar}
   \begin{columns}[T]
@@ -121,7 +145,7 @@
   \end{columns}
 \end{frame}
 
-% 4 --------------------------------------------------------------------------
+% 5 --------------------------------------------------------------------------
 \begin{frame}{Cómo son los datos}
   \framesubtitle{Análisis exploratorio en Python sobre las 590\,540 transacciones del train}
   \begin{columns}[T]
@@ -140,7 +164,7 @@
   \end{columns}
 \end{frame}
 
-% 5 --------------------------------------------------------------------------
+% 6 --------------------------------------------------------------------------
 \begin{frame}{Cómo leer las métricas}
   \framesubtitle{Cada métrica responde una pregunta distinta; el desbalance impide resumir todo con accuracy}
   \scriptsize
@@ -160,7 +184,7 @@
   \end{tabularx}
 \end{frame}
 
-% 6 --------------------------------------------------------------------------
+% 7 --------------------------------------------------------------------------
 \begin{frame}{Métricas de decisión y sociales}
   \framesubtitle{Las métricas técnicas se completan con lo que cada error le cuesta a la operación y a las personas}
   \begin{columns}[T]
@@ -180,7 +204,7 @@
   \end{columns}
 \end{frame}
 
-% 7 --------------------------------------------------------------------------
+% 8 --------------------------------------------------------------------------
 \begin{frame}{Términos de validación y herramientas utilizadas}
   \framesubtitle{Las decisiones metodológicas reproducen el orden temporal del problema}
   \begin{columns}[T]
@@ -216,7 +240,7 @@
   \end{columns}
 \end{frame}
 
-% 8 --------------------------------------------------------------------------
+% 9 --------------------------------------------------------------------------
 \begin{frame}{La tasa de fraude cambia con el tiempo}
   \framesubtitle{La línea representa el porcentaje diario; la referencia punteada marca la media global de 3,5\%}
   \begin{columns}[T]
@@ -234,7 +258,7 @@
   \end{columns}
 \end{frame}
 
-% 9 --------------------------------------------------------------------------
+% 10 --------------------------------------------------------------------------
 \begin{frame}{El contexto de cliente mejora el AUC}
   \framesubtitle{Las barras comparan modelos sobre validaciones temporales; una barra más larga indica mejor ordenamiento}
   \begin{columns}[T]
@@ -252,7 +276,7 @@
   \end{columns}
 \end{frame}
 
-% 10 --------------------------------------------------------------------------
+% 11 --------------------------------------------------------------------------
 \begin{frame}{Ablación propia: medir el aporte del magic UID}
   \framesubtitle{Notebook 05 · XGBoost d12 GPU · semilla 42 · mismo modelo, hardware y split}
   \begin{columns}[T]
@@ -274,7 +298,7 @@
   \end{columns}
 \end{frame}
 
-% 11 --------------------------------------------------------------------------
+% 12 --------------------------------------------------------------------------
 \begin{frame}{Cómo se construye el magic UID}
   \framesubtitle{El pseudo-cliente sirve para calcular historia; el identificador crudo se elimina antes de entrenar}
   \begin{center}
@@ -286,7 +310,7 @@
   \end{block}
 \end{frame}
 
-% 12 --------------------------------------------------------------------------
+% 13 --------------------------------------------------------------------------
 \begin{frame}{Del score a una decisión que puede auditarse}
   \framesubtitle{El modelo produce un score; el umbral y el monitoreo determinan la acción}
   \begin{center}
@@ -312,7 +336,7 @@
   \end{columns}
 \end{frame}
 
-% 13 -------------------------------------------------------------------------
+% 14 -------------------------------------------------------------------------
 \begin{frame}{El umbral 0,19 recupera más fraude}
   \framesubtitle{Sistema integrado 05 · OOF GroupKFold mensual ×3 · 590\,540 transacciones}
   \begin{columns}[T]
@@ -333,7 +357,7 @@
   \end{columns}
 \end{frame}
 
-% 14 -------------------------------------------------------------------------
+% 15 -------------------------------------------------------------------------
 \begin{frame}{Sin fuga temporal, el AUC cae y la decisión se sostiene}
   \framesubtitle{Mismo sistema 05: estadísticas con todo el train vs. calculadas solo con el pasado}
   \begin{columns}[T]
@@ -362,7 +386,7 @@
   \end{columns}
 \end{frame}
 
-% 15 -------------------------------------------------------------------------
+% 16 -------------------------------------------------------------------------
 \begin{frame}{Cada bloque futuro usa únicamente información pasada}
   \framesubtitle{Ejemplo del bloque 4: entrenamiento hasta el día 150 y evaluación en los 30 días siguientes}
   \begin{center}
@@ -374,7 +398,7 @@
   \end{block}
 \end{frame}
 
-% 16 -------------------------------------------------------------------------
+% 17 -------------------------------------------------------------------------
 \begin{frame}{Las ventanas responden a objetivos distintos}
   \framesubtitle{Corrida canónica: \texttt{results/adaptive\_results.csv} · 4 bloques · XGBoost 180 árboles}
   \begin{columns}[T]
@@ -404,7 +428,7 @@
   \end{columns}
 \end{frame}
 
-% 17 ------------------------------------------------------------------------
+% 18 ------------------------------------------------------------------------
 \begin{frame}{Autonomía del sistema}
   \framesubtitle{Qué decide la máquina sola, qué decide con supervisión y qué queda en manos humanas}
   \begin{columns}[T]
@@ -430,7 +454,7 @@
   \end{alertblock}
 \end{frame}
 
-% 18 ------------------------------------------------------------------------
+% 19 ------------------------------------------------------------------------
 \begin{frame}{Riesgos de un sistema dinámico}
   \framesubtitle{Reflexión final sobre confianza, estabilidad y decisión automatizada}
   \begin{columns}[T]
@@ -453,7 +477,7 @@
   \end{columns}
 \end{frame}
 
-% 19 ------------------------------------------------------------------------
+% 20 ------------------------------------------------------------------------
 \begin{frame}{Recomendación operativa}
   \framesubtitle{La política se elige según el costo de cada error y la métrica que se desea proteger}
   \vspace{0.25em}
@@ -485,7 +509,7 @@
   \end{alertblock}
 \end{frame}
 
-% 20 -------------------------------------------------------------------------
+% 21 -------------------------------------------------------------------------
 \appendix
 \begin{frame}{Apéndice · reproducibilidad}
   \framesubtitle{Semillas, hardware, fuentes de datos y artefactos ejecutables}

@@ -93,12 +93,12 @@ unzip 'data/raw/ieee-fraud-detection.zip' -d data/raw
 .venv/bin/python informe_latex/scripts/generar_graficos.py
 .venv/bin/python informe_latex/scripts/generar_adaptacion.py
 cd informe_latex && tectonic main.tex
-# versión corta para entregar: main_entrega.pdf (3 páginas)
+# versión corta para entregar: main_entrega.pdf (4 páginas)
 # infografía: figures/infografia_sistema_adaptativo.pdf
 # 6. presentación Beamer (figuras 16:9 + PDF)
 .venv/bin/python presentacion/generar_figuras.py
 (cd presentacion && tectonic planifica_presentacion.tex)
-# salida: presentacion/planifica_presentacion.pdf (20 páginas, 19 + apéndice)
+# salida: presentacion/planifica_presentacion.pdf (21 páginas, 20 + apéndice)
 ```
 
 Los gráficos del informe se regeneran desde `data/raw` y `results/`: si cambias los
