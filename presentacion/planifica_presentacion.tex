@@ -89,7 +89,7 @@
     \end{column}
     \begin{column}{0.62\textwidth}
       \begin{block}{Escenario del proyecto}
-        \small Cada fila combina una transacción con datos de tarjeta, dirección, identidad, monto y tiempo. El train cubre varios meses y el test ocurre después.
+        \small Cada fila integra varias fuentes sobre una misma operación: la transacción, la tarjeta, la dirección y la identidad del dispositivo, además del monto y el tiempo. El train cubre varios meses y el test ocurre después.
       \end{block}
       \begin{block}{Decisión que queremos tomar}
         \small El sistema asigna un score de fraude. Ese score se convierte en una acción: aprobar, revisar o bloquear la operación.
@@ -102,6 +102,45 @@
 \end{frame}
 
 % 3 --------------------------------------------------------------------------
+\begin{frame}{Qué limita el sistema}
+  \framesubtitle{Restricciones de datos, operación, recursos y decisiones que el sistema no puede tomar}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Datos}
+        \small Solo 3,5\% de las filas es fraude, así que accuracy y desbalance no conviven bien. El test ocurre después del train: ningún modelo ve el futuro que evalúa. El cliente real no existe en los datos; \texttt{card1+addr1} lo aproxima.
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Operación y recursos}
+        \small El score corre por lotes diario o mensual, sin respuesta en tiempo real. La GPU de 6\,GB y la ejecución local acotan el tamaño de cada experimento.
+      \end{block}
+      \begin{alertblock}{Decisiones vedadas}
+        \small Ningún bloqueo irreversible sin auditoría. Los casos cercanos al umbral van a revisión humana.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 4 --------------------------------------------------------------------------
+\begin{frame}{Cómo son los datos}
+  \framesubtitle{Análisis exploratorio en Python sobre las 590\,540 transacciones del train}
+  \begin{columns}[T]
+    \begin{column}{0.485\textwidth}
+      \includegraphics[width=\textwidth,height=0.62\textheight,keepaspectratio]{monto_distribucion.pdf}
+      \begin{block}{Monto de la transacción}
+        \footnotesize Las distribuciones de fraude y de operaciones legítimas se solapan: el monto por sí solo no separa las clases.
+      \end{block}
+    \end{column}
+    \begin{column}{0.485\textwidth}
+      \includegraphics[width=\textwidth,height=0.62\textheight,keepaspectratio]{fraude_hora.pdf}
+      \begin{block}{Hora del día}
+        \footnotesize La tasa de fraude cambia a lo largo del día. El tiempo aporta señal y obliga a validar hacia el futuro.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 5 --------------------------------------------------------------------------
 \begin{frame}{Cómo leer las métricas}
   \framesubtitle{Cada métrica responde una pregunta distinta; el desbalance impide resumir todo con accuracy}
   \scriptsize
@@ -114,13 +153,34 @@
     Recall & De todos los fraudes reales, cuántos detecta el modelo. & 0,6082 equivale a detectar cerca de 61 fraudes por cada 100.\\
     Precisión & De todas las alertas, cuántas corresponden a fraude. & 0,7737 equivale a 77 fraudes por cada 100 alertas.\\
     F1 & Resume el equilibrio entre recall y precisión. & Aumentó de 0,6250 a 0,6810 al ajustar el umbral.\\
+    Balanced acc. & Promedia el recall de fraude y el de operaciones legítimas. & Pasó de 0,7367 a 0,8009 al bajar el umbral a 0,19.\\
     AUC & Evalúa si el modelo ordena los fraudes por encima de las operaciones legítimas. & 0,5 sería azar; el mejor OOF del proyecto llegó a 0,9509.\\
     Umbral & Score mínimo a partir del cual se activa una alerta. & Bajar de 0,50 a 0,19 recuperó más fraude y redujo la precisión.\\
     \bottomrule
   \end{tabularx}
 \end{frame}
 
-% 4 --------------------------------------------------------------------------
+% 6 --------------------------------------------------------------------------
+\begin{frame}{Métricas de decisión y sociales}
+  \framesubtitle{Las métricas técnicas se completan con lo que cada error le cuesta a la operación y a las personas}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Decisión}
+        \small Con la ventana de 90 días el costo medio por bloque es de 17\,336. El umbral 0,19 se eligió por ese balance entre fraude recuperado y alertas falsas.
+      \end{block}
+      \begin{block}{Cobertura y riesgo}
+        \small La alerta alcanza entre 2,7\% y 3,5\% de las transacciones según el bloque. En el primero quedaron 1\,689 fraudes sin detectar y 1\,169 alertas falsas.
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Equidad: protocolo propuesto}
+        \small El dataset no registra atributos demográficos. La primera medición posible compara recall y precisión entre transacciones de UID sin historial y UID con historial, porque un cliente nuevo concentra los errores. Si existieran atributos de grupo, se reportaría por bloque la diferencia de recall y de falsos positivos entre grupos.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 7 --------------------------------------------------------------------------
 \begin{frame}{Términos de validación y herramientas utilizadas}
   \framesubtitle{Las decisiones metodológicas reproducen el orden temporal del problema}
   \begin{columns}[T]
@@ -156,7 +216,7 @@
   \end{columns}
 \end{frame}
 
-% 5 --------------------------------------------------------------------------
+% 8 --------------------------------------------------------------------------
 \begin{frame}{La tasa de fraude cambia con el tiempo}
   \framesubtitle{La línea representa el porcentaje diario; la referencia punteada marca la media global de 3,5\%}
   \begin{columns}[T]
@@ -174,25 +234,25 @@
   \end{columns}
 \end{frame}
 
-% 6 --------------------------------------------------------------------------
+% 9 --------------------------------------------------------------------------
 \begin{frame}{El contexto de cliente mejora el AUC}
   \framesubtitle{Las barras comparan modelos sobre validaciones temporales; una barra más larga indica mejor ordenamiento}
   \begin{columns}[T]
     \begin{column}{0.66\textwidth}
-      \includegraphics[width=\textwidth,height=0.66\textheight,keepaspectratio]{benchmark_auc.pdf}
+      \includegraphics[width=\textwidth,height=0.50\textheight,keepaspectratio]{benchmark_auc.pdf}
     \end{column}
     \begin{column}{0.32\textwidth}
       \begin{block}{Lectura de la gráfica}
-        \footnotesize La GPU redujo tiempo, pero los dos baselines quedaron cerca en AUC. El salto aparece con XGBoost d12 y aumenta al agregar historial por UID.
+        \footnotesize En el mismo corte, regresión logística alcanzó 0,8022 y random forest 0,9000 de AUC; XGBoost llegó a 0,9242. La GPU acortó tiempos sin mover el AUC; el salto definitivo viene del historial por UID.
       \end{block}
+      \vspace{-0.1em}
       \statcard{mejor AUC local}{tintteal}{\color{teal}0,9479}
-      \vspace{0.2em}
       \statcard{ganancia magic UID}{tintteal}{\color{teal}+0,0104}
     \end{column}
   \end{columns}
 \end{frame}
 
-% 7 --------------------------------------------------------------------------
+% 10 --------------------------------------------------------------------------
 \begin{frame}{Ablación propia: medir el aporte del magic UID}
   \framesubtitle{Notebook 05 · XGBoost d12 GPU · semilla 42 · mismo modelo, hardware y split}
   \begin{columns}[T]
@@ -214,7 +274,7 @@
   \end{columns}
 \end{frame}
 
-% 8 --------------------------------------------------------------------------
+% 11 --------------------------------------------------------------------------
 \begin{frame}{Cómo se construye el magic UID}
   \framesubtitle{El pseudo-cliente sirve para calcular historia; el identificador crudo se elimina antes de entrenar}
   \begin{center}
@@ -226,28 +286,33 @@
   \end{block}
 \end{frame}
 
-% 9 --------------------------------------------------------------------------
+% 13 --------------------------------------------------------------------------
 \begin{frame}{Del score a una decisión que puede auditarse}
   \framesubtitle{El modelo produce un score; el umbral y el monitoreo determinan la acción}
   \begin{center}
-    \includegraphics[width=0.88\textwidth,height=0.47\textheight,keepaspectratio]{pipeline_operativo.pdf}
+    \includegraphics[width=0.82\textwidth,height=0.38\textheight,keepaspectratio]{pipeline_operativo.pdf}
   \end{center}
   \vspace{-0.2em}
   \begin{columns}[T]
-    \begin{column}{0.48\textwidth}
+    \begin{column}{0.31\textwidth}
       \begin{block}{Durante la predicción}
-        \small XGBoost combina las features y entrega un score. El umbral traduce ese valor en aprobar, revisar o bloquear.
+        \footnotesize XGBoost combina las features y entrega un score. El umbral traduce ese valor en aprobar, revisar o bloquear.
       \end{block}
     \end{column}
-    \begin{column}{0.48\textwidth}
+    \begin{column}{0.31\textwidth}
       \begin{block}{Después de la predicción}
-        \small Recall, F1, AUC, PSI y costo se calculan por bloque. Una degradación sostenida activa la revisión de ventana y el reentrenamiento.
+        \footnotesize Recall, F1, AUC, PSI y costo se calculan por bloque. Una degradación sostenida activa la revisión de ventana y el reentrenamiento.
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Cerca del umbral}
+        \footnotesize La distancia al umbral indica qué tan firme es cada decisión. Los scores de la zona gris van a revisión humana; una calibración posterior puede afinar esa frontera.
       \end{block}
     \end{column}
   \end{columns}
 \end{frame}
 
-% 10 -------------------------------------------------------------------------
+% 14 -------------------------------------------------------------------------
 \begin{frame}{El umbral 0,19 recupera más fraude}
   \framesubtitle{OOF notebook 04 · GroupKFold mensual ×6 · 590\,540 transacciones}
   \begin{columns}[T]
@@ -268,7 +333,7 @@
   \end{columns}
 \end{frame}
 
-% 11 -------------------------------------------------------------------------
+% 15 -------------------------------------------------------------------------
 \begin{frame}{Cada bloque futuro usa únicamente información pasada}
   \framesubtitle{Ejemplo del bloque 4: entrenamiento hasta el día 150 y evaluación en los 30 días siguientes}
   \begin{center}
@@ -280,7 +345,7 @@
   \end{block}
 \end{frame}
 
-% 12 -------------------------------------------------------------------------
+% 16 -------------------------------------------------------------------------
 \begin{frame}{Las ventanas responden a objetivos distintos}
   \framesubtitle{Corrida canónica: \texttt{results/adaptive\_results.csv} · 4 bloques · XGBoost 180 árboles}
   \begin{columns}[T]
@@ -310,7 +375,56 @@
   \end{columns}
 \end{frame}
 
-% 13 -------------------------------------------------------------------------
+% 16 ------------------------------------------------------------------------
+\begin{frame}{Autonomía del sistema}
+  \framesubtitle{Qué decide la máquina sola, qué decide con supervisión y qué queda en manos humanas}
+  \begin{columns}[T]
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Automático}
+        \small Score por transacción, alerta según el umbral 0,19 y cálculo de métricas y PSI por bloque. Ninguna de estas tareas requiere intervención.
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Semiautomático}
+        \small El reentrenamiento y el cambio de ventana se activan cuando el desempeño o el PSI se degradan. La política nueva se revisa antes de entrar en producción.
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Humano}
+        \small El bloqueo de operaciones, la auditoría de alertas y la recalibración del umbral requieren una persona.
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vspace{0.45em}
+  \begin{alertblock}{Nivel elegido}
+    \centering\small Semiautomático: el sistema mantiene el modelo por su cuenta, y toda decisión que afecta a un cliente conserva revisión humana.
+  \end{alertblock}
+\end{frame}
+
+% 17 ------------------------------------------------------------------------
+\begin{frame}{Riesgos de un sistema dinámico}
+  \framesubtitle{Reflexión final sobre confianza, estabilidad y decisión automatizada}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Qué puede fallar}
+        \small Fuga temporal en las agregaciones, cobertura de identidad que cambia con el tiempo, campañas de fraude nuevas, costo desigual de los errores y degradación silenciosa del modelo.
+      \end{block}
+      \begin{block}{Mitigación}
+        \small Registro de cada predicción, versionado del modelo con rollback, revisión de alertas y evaluación por período.
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{alertblock}{Lo que los resultados muestran}
+        \small El PSI medio quedó bajo 0,03 en los cuatro bloques y aun así el AUC cayó en el segundo: vigilar variables no reemplaza vigilar decisiones.
+      \end{alertblock}
+      \begin{block}{Límites de la política}
+        \small La ventana corta descarta drift viejo y también señal estable: con 30 días el AUC medio bajó a 0,9039. El umbral 0,19 se calibró con datos pasados; una campaña nueva puede desalinearlo.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 18 ------------------------------------------------------------------------
 \begin{frame}{Recomendación operativa}
   \framesubtitle{La política se elige según el costo de cada error y la métrica que se desea proteger}
   \vspace{0.25em}
@@ -342,7 +456,7 @@
   \end{alertblock}
 \end{frame}
 
-% 14 -------------------------------------------------------------------------
+% 19 -------------------------------------------------------------------------
 \appendix
 \begin{frame}{Apéndice · reproducibilidad}
   \framesubtitle{Semillas, hardware, fuentes de datos y artefactos ejecutables}

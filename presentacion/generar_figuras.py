@@ -21,6 +21,8 @@ from matplotlib.ticker import FuncFormatter
 
 ROOT = Path(__file__).resolve().parents[1]
 FIGURES = ROOT / "presentacion" / "figures"
+RESULTS_DIR = ROOT / "results"
+FIXED = (0.50, 0.19)
 
 INK = "#13263A"
 TEAL = "#0F766E"
@@ -88,6 +90,62 @@ def fraude_temporal() -> None:
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
     save(fig, "fraude_temporal")
+
+
+def monto_distribucion() -> None:
+    df = pd.read_csv(
+        ROOT / "data" / "raw" / "train_transaction.csv",
+        usecols=["TransactionAmt", "isFraud"],
+    )
+    legit = np.log10(df.loc[df["isFraud"].eq(0), "TransactionAmt"] + 1)
+    fraud = np.log10(df.loc[df["isFraud"].eq(1), "TransactionAmt"] + 1)
+    bins = np.linspace(0, 4.5, 55)
+
+    fig, ax = plt.subplots(figsize=(5.8, 4.1))
+    ax.hist(legit, bins=bins, density=True, color=SLATE, alpha=0.72, label="Legítimas")
+    ax.hist(fraud, bins=bins, density=True, color=CORAL, alpha=0.82, label="Fraude")
+    ax.set_xlabel("log10(monto + 1)")
+    ax.set_ylabel("densidad")
+    ax.set_xlim(0, 4.5)
+    ax.grid(axis="y", alpha=0.2)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.legend(frameon=False, loc="upper right", fontsize=12)
+    fig.tight_layout()
+    save(fig, "monto_distribucion")
+
+
+def fraude_hora() -> None:
+    df = pd.read_csv(
+        ROOT / "data" / "raw" / "train_transaction.csv",
+        usecols=["TransactionDT", "isFraud"],
+    )
+    df["hour"] = (df["TransactionDT"] // 3600 % 24).astype(int)
+    rate = df.groupby("hour")["isFraud"].mean().mul(100)
+    peak_hour = int(rate.idxmax())
+    peak = float(rate.max())
+
+    fig, ax = plt.subplots(figsize=(5.8, 4.1))
+    colors = [CORAL if h == peak_hour else TEAL for h in rate.index]
+    ax.bar(rate.index, rate.values, color=colors, width=0.78)
+    ax.set_xlabel("hora desde el inicio del registro")
+    ax.set_ylabel("fraude (%)")
+    ax.set_xticks(range(0, 24, 3))
+    ax.set_xlim(-0.8, 23.8)
+    ax.set_ylim(0, peak * 1.38)
+    ax.grid(axis="y", alpha=0.2)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.text(
+        0.03,
+        0.95,
+        f"pico: hora {peak_hour} · {decimal(peak, 1)}%",
+        transform=ax.transAxes,
+        va="top",
+        color=CORAL,
+        fontsize=12,
+        weight="bold",
+    )
+    fig.tight_layout()
+    save(fig, "fraude_hora")
 
 
 def benchmark_auc() -> None:
@@ -235,14 +293,19 @@ def pipeline_operativo() -> None:
     _box(ax, 9.4, 1.8, 3.35, 1.65, "3 · MONITOREO\nRecall + PSI + costo", TINT_TEAL_SOFT, 14, edge=SLATE)
     _arrow(ax, (3.65, 2.62), (4.85, 2.62), TEAL)
     _arrow(ax, (8.2, 2.62), (9.4, 2.62), TEAL)
-    _arrow(ax, (11.05, 1.8), (2.0, 1.18), CORAL, "arc3,rad=0.22")
-    ax.text(6.55, 0.38, "Si cae el desempeño o sube el drift: revisar ventana y reentrenar", ha="center", fontsize=14, color=CORAL, weight="bold")
+    _arrow(ax, (11.05, 1.8), (2.0, 1.8), CORAL, "arc3,rad=-0.13")
+    ax.text(6.55, 0.6, "Si cae el desempeño o sube el drift: revisar ventana y reentrenar", ha="center", fontsize=14, color=CORAL, weight="bold")
     fig.tight_layout()
     save(fig, "pipeline_operativo")
 
 
 def tradeoff_umbral() -> None:
-    df = pd.read_csv(ROOT / "results" / "threshold_metrics_xgb96.csv")
+    df = pd.read_csv(RESULTS_DIR / "threshold_metrics_05_integrated.csv")
+    df = df[
+        df["model"].eq("integrado 05 + magic UID")
+        & df["validation"].str.startswith("OOF")
+        & df["threshold"].isin(FIXED)
+    ].sort_values("threshold").reset_index(drop=True)
     metrics = ["precision", "recall", "f1"]
     labels = {"precision": "Precisión", "recall": "Recall", "f1": "F1"}
     colors = {"precision": INK, "recall": CORAL, "f1": TEAL}
@@ -270,8 +333,9 @@ def tradeoff_umbral() -> None:
     ax.grid(axis="y", alpha=0.2)
     ax.spines[["top", "right"]].set_visible(False)
     ax.legend(frameon=False, ncol=3, loc="upper center")
+    delta_pp = (float(df.loc[1, "recall"]) - float(df.loc[0, "recall"])) * 100
     ax.annotate(
-        "+13,3 pp de recall",
+        f"+{decimal(delta_pp, 1)} pp de recall",
         xy=(1, 0.665),
         xytext=(1, 0.855),
         arrowprops={"arrowstyle": "->", "color": CORAL, "linewidth": 1.8},
@@ -282,6 +346,56 @@ def tradeoff_umbral() -> None:
     )
     fig.tight_layout()
     save(fig, "tradeoff_umbral")
+
+
+def fuga_temporal() -> None:
+    df = pd.read_csv(RESULTS_DIR / "threshold_metrics_05_causal.csv")
+    tau = float(df.loc[df["notes"].str.contains("tau"), "threshold"].iloc[0])
+    labels = ["Protocolo original\n(transductivo)", "Estrictamente causal\n(solo pasado)"]
+    aucs = [0.9456, float(df["auc"].iloc[0])]
+    colors = [TEAL, INK]
+
+    fig, ax = plt.subplots(figsize=(6.6, 4.6))
+    bars = ax.bar(labels, aucs, color=colors, width=0.55)
+    ax.set_ylim(0.90, 0.96)
+    ax.set_ylabel("AUC en holdout 75/25")
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: decimal(y, 3)))
+    ax.grid(axis="y", alpha=0.2)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.tick_params(axis="x", labelsize=12)
+    for bar, value in zip(bars, aucs):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            value + 0.0015,
+            decimal(value),
+            ha="center",
+            va="bottom",
+            fontsize=13,
+            weight="bold",
+            color=INK,
+        )
+    ax.annotate(
+        "−0,028 AUC",
+        xy=(1, aucs[1] + 0.004),
+        xytext=(0.5, 0.952),
+        arrowprops={"arrowstyle": "->", "color": CORAL, "linewidth": 1.8},
+        color=CORAL,
+        fontsize=14,
+        weight="bold",
+        ha="center",
+    )
+    ax.text(
+        0.03,
+        0.965,
+        f"umbral calibrado: {decimal(tau)}",
+        transform=ax.transAxes,
+        va="top",
+        color=SLATE,
+        fontsize=12,
+        weight="bold",
+    )
+    fig.tight_layout()
+    save(fig, "fuga_temporal")
 
 
 def protocolo_temporal() -> None:
@@ -349,11 +463,14 @@ def auc_adaptativo() -> None:
 if __name__ == "__main__":
     FIGURES.mkdir(parents=True, exist_ok=True)
     fraude_temporal()
+    monto_distribucion()
+    fraude_hora()
     benchmark_auc()
     ablacion_uid()
     uid_diagrama()
     pipeline_operativo()
     tradeoff_umbral()
+    fuga_temporal()
     protocolo_temporal()
     auc_adaptativo()
     print("Figuras generadas en", FIGURES)
