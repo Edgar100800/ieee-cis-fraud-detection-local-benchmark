@@ -84,6 +84,11 @@ unzip 'data/raw/ieee-fraud-detection.zip' -d data/raw
   --windows expanding,30,60,90 --initial-days 60 --eval-days 30 \
   --model xgboost --device cuda --n-estimators 180
 
+# 4b. métricas de decisión (recall, precisión, F1) del sistema integrado 05
+.venv/bin/python src/eval_05_integrated.py --experiment all
+# salidas: results/threshold_metrics_05_integrated.csv (protocolo del notebook)
+#          results/threshold_metrics_05_causal.csv       (variante estrictamente causal)
+
 # 5. informe (figuras + PDF)
 .venv/bin/python informe_latex/scripts/generar_graficos.py
 .venv/bin/python informe_latex/scripts/generar_adaptacion.py
@@ -93,7 +98,7 @@ cd informe_latex && tectonic main.tex
 # 6. presentación Beamer (figuras 16:9 + PDF)
 .venv/bin/python presentacion/generar_figuras.py
 (cd presentacion && tectonic planifica_presentacion.tex)
-# salida: presentacion/planifica_presentacion.pdf (19 páginas, 18 + apéndice)
+# salida: presentacion/planifica_presentacion.pdf (20 páginas, 19 + apéndice)
 ```
 
 Los gráficos del informe se regeneran desde `data/raw` y `results/`: si cambias los
@@ -104,6 +109,9 @@ benchmarks, re-ejecuta el paso 4.
 El benchmark original mantiene un protocolo transductivo para reproducir la competencia. La
 evaluación adaptativa de `src/adaptive_fraud.py` implementa la variante **estrictamente causal**:
 las estadísticas por UID solo usan transacciones anteriores a cada bloque futuro.
+`src/eval_05_integrated.py` mide el costo de esa causalidad en el holdout del notebook 05:
+el AUC baja de 0,9456 (transductivo) a 0,9175 (causal), y el umbral calibrado en un bloque
+intermedio (0,108) sostiene F1 0,60 en el bloque futuro.
 
 ## Créditos y licencias
 

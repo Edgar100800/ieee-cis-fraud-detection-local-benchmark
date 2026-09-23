@@ -149,11 +149,11 @@
     \toprule
     \color{ink}Término & \color{ink}\textbf{Qué significa} & \color{ink}\textbf{Cómo se lee aquí}\\
     \midrule
-    Accuracy & Proporción total de predicciones correctas. & 0,9801 parece alto porque 96,5\% de las filas no son fraude.\\
-    Recall & De todos los fraudes reales, cuántos detecta el modelo. & 0,6082 equivale a detectar cerca de 61 fraudes por cada 100.\\
-    Precisión & De todas las alertas, cuántas corresponden a fraude. & 0,7737 equivale a 77 fraudes por cada 100 alertas.\\
-    F1 & Resume el equilibrio entre recall y precisión. & Aumentó de 0,6250 a 0,6810 al ajustar el umbral.\\
-    Balanced acc. & Promedia el recall de fraude y el de operaciones legítimas. & Pasó de 0,7367 a 0,8009 al bajar el umbral a 0,19.\\
+    Accuracy & Proporción total de predicciones correctas. & 0,9787 parece alto porque 96,5\% de las filas no son fraude.\\
+    Recall & De todos los fraudes reales, cuántos detecta el modelo. & 0,5981 equivale a detectar cerca de 60 fraudes por cada 100.\\
+    Precisión & De todas las alertas, cuántas corresponden a fraude. & 0,7429 equivale a 74 fraudes por cada 100 alertas.\\
+    F1 & Resume el equilibrio entre recall y precisión. & Aumentó de 0,6062 a 0,6627 al ajustar el umbral.\\
+    Balanced acc. & Promedia el recall de fraude y el de operaciones legítimas. & Pasó de 0,7269 a 0,7953 al bajar el umbral a 0,19.\\
     AUC & Evalúa si el modelo ordena los fraudes por encima de las operaciones legítimas. & 0,5 sería azar; el mejor OOF del proyecto llegó a 0,9509.\\
     Umbral & Score mínimo a partir del cual se activa una alerta. & Bajar de 0,50 a 0,19 recuperó más fraude y redujo la precisión.\\
     \bottomrule
@@ -286,7 +286,7 @@
   \end{block}
 \end{frame}
 
-% 13 --------------------------------------------------------------------------
+% 12 --------------------------------------------------------------------------
 \begin{frame}{Del score a una decisión que puede auditarse}
   \framesubtitle{El modelo produce un score; el umbral y el monitoreo determinan la acción}
   \begin{center}
@@ -312,22 +312,51 @@
   \end{columns}
 \end{frame}
 
-% 14 -------------------------------------------------------------------------
+% 13 -------------------------------------------------------------------------
 \begin{frame}{El umbral 0,19 recupera más fraude}
-  \framesubtitle{OOF notebook 04 · GroupKFold mensual ×6 · 590\,540 transacciones}
+  \framesubtitle{Sistema integrado 05 · OOF GroupKFold mensual ×3 · 590\,540 transacciones}
   \begin{columns}[T]
     \begin{column}{0.64\textwidth}
       \includegraphics[width=\textwidth,height=0.66\textheight,keepaspectratio]{tradeoff_umbral.pdf}
     \end{column}
     \begin{column}{0.34\textwidth}
       \begin{block}{Umbral 0,50}
-        \footnotesize Detecta 47,51 de cada 100 fraudes. De cada 100 alertas, 91,32 corresponden a fraude.
+        \footnotesize Detecta 45,6 de cada 100 fraudes. De cada 100 alertas, 90,6 corresponden a fraude.
       \end{block}
       \begin{block}{Umbral 0,19}
-        \footnotesize Detecta 60,82 de cada 100 fraudes. La precisión baja a 77,37 alertas correctas por cada 100.
+        \footnotesize Detecta 59,8 de cada 100 fraudes. La precisión baja a 74,3 alertas correctas por cada 100.
       \end{block}
       \begin{alertblock}{Balance obtenido}
-        \footnotesize F1 sube de 0,6250 a 0,6810. Accuracy permanece en 0,9801 y no refleja el cambio.
+        \footnotesize F1 sube de 0,6062 a 0,6627. Accuracy se queda en 0,979 y no refleja el ajuste.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 14 -------------------------------------------------------------------------
+\begin{frame}{Sin fuga temporal, el AUC cae y la decisión se sostiene}
+  \framesubtitle{Mismo sistema 05: estadísticas con todo el train vs. calculadas solo con el pasado}
+  \begin{columns}[T]
+    \begin{column}{0.38\textwidth}
+      \includegraphics[width=\textwidth,height=0.58\textheight,keepaspectratio]{fuga_temporal.pdf}
+    \end{column}
+    \begin{column}{0.60\textwidth}
+      \begin{block}{Holdout causal: métricas por umbral}
+        \footnotesize
+        \setlength{\tabcolsep}{4.5pt}
+        \begin{tabular}{@{}lrrr@{}}
+          \toprule
+          Umbral & Recall & Precisión & F1\\
+          \midrule
+          0,50 & 0,3218 & 0,9308 & 0,4782\\
+          0,19 & 0,4200 & 0,8903 & 0,5707\\
+          \textbf{0,108 calibrado} & \textbf{0,4602} & 0,8651 & \textbf{0,6008}\\
+          \bottomrule
+        \end{tabular}
+      \end{block}
+      \begin{alertblock}{Qué significa la caída}
+        \footnotesize Las agregaciones del protocolo original incluían el período evaluado; calculadas solo con el pasado, el AUC baja 0,028.\\[0.3em]
+        El umbral calibrado por F1 en el bloque 60--75\% sin ver el futuro sostiene F1 0,60 en el bloque posterior.
       \end{alertblock}
     \end{column}
   \end{columns}
@@ -375,13 +404,13 @@
   \end{columns}
 \end{frame}
 
-% 16 ------------------------------------------------------------------------
+% 17 ------------------------------------------------------------------------
 \begin{frame}{Autonomía del sistema}
   \framesubtitle{Qué decide la máquina sola, qué decide con supervisión y qué queda en manos humanas}
   \begin{columns}[T]
     \begin{column}{0.31\textwidth}
       \begin{block}{Automático}
-        \small Score por transacción, alerta según el umbral 0,19 y cálculo de métricas y PSI por bloque. Ninguna de estas tareas requiere intervención.
+        \small Score por transacción, alerta según el umbral calibrado y cálculo de métricas y PSI por bloque. Ninguna de estas tareas requiere intervención.
       \end{block}
     \end{column}
     \begin{column}{0.31\textwidth}
@@ -401,7 +430,7 @@
   \end{alertblock}
 \end{frame}
 
-% 17 ------------------------------------------------------------------------
+% 18 ------------------------------------------------------------------------
 \begin{frame}{Riesgos de un sistema dinámico}
   \framesubtitle{Reflexión final sobre confianza, estabilidad y decisión automatizada}
   \begin{columns}[T]
@@ -418,13 +447,13 @@
         \small El PSI medio quedó bajo 0,03 en los cuatro bloques y aun así el AUC cayó en el segundo: vigilar variables no reemplaza vigilar decisiones.
       \end{alertblock}
       \begin{block}{Límites de la política}
-        \small La ventana corta descarta drift viejo y también señal estable: con 30 días el AUC medio bajó a 0,9039. El umbral 0,19 se calibró con datos pasados; una campaña nueva puede desalinearlo.
+        \small La ventana corta descarta drift viejo y también señal estable: con 30 días el AUC medio bajó a 0,9039. El umbral se calibró con datos pasados; una campaña nueva puede desalinearlo.
       \end{block}
     \end{column}
   \end{columns}
 \end{frame}
 
-% 18 ------------------------------------------------------------------------
+% 19 ------------------------------------------------------------------------
 \begin{frame}{Recomendación operativa}
   \framesubtitle{La política se elige según el costo de cada error y la métrica que se desea proteger}
   \vspace{0.25em}
@@ -446,7 +475,7 @@
     \end{column}
     \begin{column}{0.31\textwidth}
       \begin{block}{Decisión}
-        \small Iniciar con umbral 0,19 y recalibrarlo cuando cambien los costos o el comportamiento del fraude.
+        \small Iniciar con umbral calibrado por F1 (0,18 en OOF; 0,108 en causal) y recalibrarlo cuando cambien los costos o el fraude.
       \end{block}
     \end{column}
   \end{columns}
@@ -456,7 +485,7 @@
   \end{alertblock}
 \end{frame}
 
-% 19 -------------------------------------------------------------------------
+% 20 -------------------------------------------------------------------------
 \appendix
 \begin{frame}{Apéndice · reproducibilidad}
   \framesubtitle{Semillas, hardware, fuentes de datos y artefactos ejecutables}
@@ -486,13 +515,15 @@
         \scriptsize
         \texttt{results/RANKING\_FINAL.csv}\\
         \texttt{results/bench\_05\_integrated.csv}\\
-        \texttt{results/threshold\_metrics\_xgb96.csv}\\
+        \texttt{results/threshold\_metrics\_05\_integrated.csv}\\
+        \texttt{results/threshold\_metrics\_05\_causal.csv}\\
         \texttt{results/adaptive\_results.csv}
       \end{block}
       \begin{block}{Código y entregables}
         \scriptsize
         \texttt{codigos/ejecutados/01--05}\\
         \texttt{src/adaptive\_fraud.py}\\
+        \texttt{src/eval\_05\_integrated.py}\\
         \texttt{presentacion/generar\_figuras.py}\\
         \texttt{informe\_latex/main\_entrega.pdf}
       \end{block}
