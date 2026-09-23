@@ -1,0 +1,4 @@
+model,validation,threshold,accuracy,recall,precision,f1,balanced_accuracy,auc,notes,source
+integrado 05 + magic UID (causal),holdout 75/25 causal,0.5,0.9757442340908321,0.32176470588235295,0.9307997731140102,0.4782165233862743,0.6604543878799635,0.9175,umbrales fijos 0.50 y 0.19,"src/eval_05_integrated.py --experiment causal; features causales, semilla 42"
+integrado 05 + magic UID (causal),holdout 75/25 causal,0.19,0.9781759067971687,0.42,0.8902743142144638,0.5707434052757794,0.7090739116708177,0.9175,umbrales fijos 0.50 y 0.19,"src/eval_05_integrated.py --experiment causal; features causales, semilla 42"
+integrado 05 + magic UID (causal),holdout 75/25 causal,0.1084,0.9788735733396552,0.46019607843137256,0.8650939918908956,0.6007935492128503,0.7288141440320473,0.9175,"umbral calibrado en [60%,75%) sin usar el futuro (tau*=0.1084)","src/eval_05_integrated.py --experiment causal; features causales, semilla 42"
