@@ -27,3 +27,12 @@ informe_latex/build/
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Artefactos de la ejecucion de notebooks (predicciones, imports, OOF)
+sub_xgb_95.csv
+sub_xgb_96.csv
+simple_xgboost.csv
+ieee_cis_fraud_detection_v2.csv
+feature_importances.csv
+oof_xgb_95.csv
+oof_xgb_96.csv

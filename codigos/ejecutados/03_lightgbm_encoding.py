@@ -1,18 +1,9 @@
-"""
-NOTEBOOK: nroman__lgb-single-model-lb-0-9419
+#!/usr/bin/env python
+# coding: utf-8
 
-SECCIONES (markdown del notebook):
+# In[1]:
 
 
-TECNICAS DETECTADAS:
-  - LightGBM (6 menciones)
-  - Validacion temporal (2 menciones)
-  - UID / magic client (2 menciones)
-  - Label encoding (3 menciones)
-  - EDA con matplotlib/seaborn (7 menciones)
-"""
-
-# %% [None]
 import pandas as pd
 import numpy as np
 import multiprocessing
@@ -23,37 +14,48 @@ import lightgbm as lgb
 import gc
 from time import time
 import datetime
-from tqdm import tqdm_notebook
+from tqdm.auto import tqdm
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import KFold, TimeSeriesSplit
 from sklearn.metrics import roc_auc_score
 warnings.simplefilter('ignore')
 sns.set()
-%matplotlib inline
+get_ipython().run_line_magic('matplotlib', 'inline')
 
-# %% [None]
-files = ['../input/test_identity.csv', 
-         '../input/test_transaction.csv',
-         '../input/train_identity.csv',
-         '../input/train_transaction.csv',
-         '../input/sample_submission.csv']
 
-# %% [None]
-%%time
-def load_data(file):
-    return pd.read_csv(file)
+# In[2]:
 
-with multiprocessing.Pool() as pool:
-    test_id, test_tr, train_id, train_tr, sub = pool.map(load_data, files)
 
-# %% [None]
+files = ['data/raw/test_identity.csv', 
+         'data/raw/test_transaction.csv',
+         'data/raw/train_identity.csv',
+         'data/raw/train_transaction.csv',
+         'data/raw/sample_submission.csv']
+
+
+# In[3]:
+
+
+get_ipython().run_cell_magic('time', '', 'def load_data(file):\n    return pd.read_csv(file)\n\nwith multiprocessing.Pool() as pool:\n    test_id, test_tr, train_id, train_tr, sub = pool.map(load_data, files)\n')
+
+
+# In[4]:
+
+
 train = pd.merge(train_tr, train_id, on='TransactionID', how='left')
+
+# normaliza id-XX -> id_XX (quirk del CSV original de test_identity)
+test_id.columns = [c.replace('id-', 'id_') for c in test_id.columns]
+
 test = pd.merge(test_tr, test_id, on='TransactionID', how='left')
 
 del test_id, test_tr, train_id, train_tr
 gc.collect()
 
-# %% [None]
+
+# In[5]:
+
+
 useful_features = ['TransactionAmt', 'ProductCD', 'card1', 'card2', 'card3', 'card4', 'card5', 'card6', 'addr1', 'addr2', 'dist1',
                    'P_emaildomain', 'R_emaildomain', 'C1', 'C2', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9', 'C10', 'C11', 'C12', 'C13',
                    'C14', 'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D8', 'D9', 'D10', 'D11', 'D12', 'D13', 'D14', 'D15', 'M2', 'M3',
@@ -75,29 +77,37 @@ useful_features = ['TransactionAmt', 'ProductCD', 'card1', 'card2', 'card3', 'ca
                    'id_11', 'id_12', 'id_13', 'id_14', 'id_15', 'id_17', 'id_19', 'id_20', 'id_30', 'id_31', 'id_32', 'id_33',
                    'id_36', 'id_37', 'id_38', 'DeviceType', 'DeviceInfo']
 
-# %% [None]
+
+# In[6]:
+
+
 cols_to_drop = [col for col in train.columns if col not in useful_features]
 cols_to_drop.remove('isFraud')
 cols_to_drop.remove('TransactionID')
 cols_to_drop.remove('TransactionDT')
 
-# %% [None]
+
+# In[7]:
+
+
 print('{} features are going to be dropped for being useless'.format(len(cols_to_drop)))
 
 train = train.drop(cols_to_drop, axis=1)
 test = test.drop(cols_to_drop, axis=1)
 
-# %% [None]
+
+# In[8]:
+
+
 # New feature - decimal part of the transaction amount
 train['TransactionAmt_decimal'] = ((train['TransactionAmt'] - train['TransactionAmt'].astype(int)) * 1000).astype(int)
 test['TransactionAmt_decimal'] = ((test['TransactionAmt'] - test['TransactionAmt'].astype(int)) * 1000).astype(int)
 
-# Count encoding for card1 feature. 
-# Explained in this kernel: https://www.kaggle.com/nroman/eda-for-cis-fraud-detection
+# Count encoding para card1 (frecuencia como senal de riesgo)
 train['card1_count_full'] = train['card1'].map(pd.concat([train['card1'], test['card1']], ignore_index=True).value_counts(dropna=False))
 test['card1_count_full'] = test['card1'].map(pd.concat([train['card1'], test['card1']], ignore_index=True).value_counts(dropna=False))
 
-# https://www.kaggle.com/fchmiel/day-and-time-powerful-predictive-feature
+# features de dia de la semana y hora de la transaccion
 train['Transaction_day_of_week'] = np.floor((train['TransactionDT'] / (3600 * 24) - 1) % 7)
 test['Transaction_day_of_week'] = np.floor((test['TransactionDT'] / (3600 * 24) - 1) % 7)
 train['Transaction_hour'] = np.floor(train['TransactionDT'] / 3600) % 24
@@ -115,40 +125,55 @@ for feature in ['id_02__id_20', 'id_02__D8', 'D11__DeviceInfo', 'DeviceInfo__P_e
     le.fit(list(train[feature].astype(str).values) + list(test[feature].astype(str).values))
     train[feature] = le.transform(list(train[feature].astype(str).values))
     test[feature] = le.transform(list(test[feature].astype(str).values))
-    
+
 for feature in ['id_34', 'id_36']:
     if feature in useful_features:
         # Count encoded for both train and test
         train[feature + '_count_full'] = train[feature].map(pd.concat([train[feature], test[feature]], ignore_index=True).value_counts(dropna=False))
         test[feature + '_count_full'] = test[feature].map(pd.concat([train[feature], test[feature]], ignore_index=True).value_counts(dropna=False))
-        
+
 for feature in ['id_01', 'id_31', 'id_33', 'id_35', 'id_36']:
     if feature in useful_features:
         # Count encoded separately for train and test
         train[feature + '_count_dist'] = train[feature].map(train[feature].value_counts(dropna=False))
         test[feature + '_count_dist'] = test[feature].map(test[feature].value_counts(dropna=False))
 
-# %% [None]
-for col in tqdm_notebook(train.columns):
-    if train[col].dtype == 'object':
+
+# In[9]:
+
+
+for col in tqdm(train.columns):
+    if not pd.api.types.is_numeric_dtype(train[col]):
         le = LabelEncoder()
         le.fit(list(train[col].astype(str).values) + list(test[col].astype(str).values))
         train[col] = le.transform(list(train[col].astype(str).values))
         test[col] = le.transform(list(test[col].astype(str).values))   
 
-# %% [None]
+
+# In[10]:
+
+
 X = train.sort_values('TransactionDT').drop(['isFraud', 'TransactionDT', 'TransactionID'], axis=1)
 y = train.sort_values('TransactionDT')['isFraud']
 test = test.sort_values('TransactionDT').drop(['TransactionDT', 'TransactionID'], axis=1)
 
-# %% [None]
+
+# In[11]:
+
+
 del train
 gc.collect()
 
-# %% [None]
+
+# In[12]:
+
+
 X.shape, test.shape
 
-# %% [None]
+
+# In[13]:
+
+
 params = {'num_leaves': 491,
           'min_child_weight': 0.03454472573214212,
           'feature_fraction': 0.3797454081646243,
@@ -166,7 +191,10 @@ params = {'num_leaves': 491,
           'random_state': 47
          }
 
-# %% [None]
+
+# In[14]:
+
+
 folds = TimeSeriesSplit(n_splits=5)
 
 aucs = list()
@@ -177,14 +205,15 @@ training_start_time = time()
 for fold, (trn_idx, test_idx) in enumerate(folds.split(X, y)):
     start_time = time()
     print('Training on fold {}'.format(fold + 1))
-    
+
     trn_data = lgb.Dataset(X.iloc[trn_idx], label=y.iloc[trn_idx])
     val_data = lgb.Dataset(X.iloc[test_idx], label=y.iloc[test_idx])
-    clf = lgb.train(params, trn_data, 10000, valid_sets = [trn_data, val_data], verbose_eval=1000, early_stopping_rounds=500)
-    
+    clf = lgb.train(params, trn_data, 10000, valid_sets=[trn_data, val_data],
+              callbacks=[lgb.early_stopping(500), lgb.log_evaluation(1000)])
+
     feature_importances['fold_{}'.format(fold + 1)] = clf.feature_importance()
     aucs.append(clf.best_score['valid_1']['auc'])
-    
+
     print('Fold {} finished in {}'.format(fold + 1, str(datetime.timedelta(seconds=time() - start_time))))
 print('-' * 30)
 print('Training has finished.')
@@ -192,7 +221,10 @@ print('Total training time is {}'.format(str(datetime.timedelta(seconds=time() -
 print('Mean AUC:', np.mean(aucs))
 print('-' * 30)
 
-# %% [None]
+
+# In[15]:
+
+
 feature_importances['average'] = feature_importances[['fold_{}'.format(fold + 1) for fold in range(folds.n_splits)]].mean(axis=1)
 feature_importances.to_csv('feature_importances.csv')
 
@@ -200,16 +232,29 @@ plt.figure(figsize=(16, 16))
 sns.barplot(data=feature_importances.sort_values(by='average', ascending=False).head(50), x='average', y='feature');
 plt.title('50 TOP feature importance over {} folds average'.format(folds.n_splits));
 
-# %% [None]
+
+# In[16]:
+
+
 # clf right now is the last model, trained with 80% of data and validated with 20%
 best_iter = clf.best_iteration
 
-# %% [None]
-clf = lgb.LGBMClassifier(**params, num_boost_round=best_iter)
+
+# In[17]:
+
+
+clf = lgb.LGBMClassifier(**params, n_estimators=best_iter)
 clf.fit(X, y)
 
-# %% [None]
+
+# In[18]:
+
+
 sub['isFraud'] = clf.predict_proba(test)[:, 1]
 
-# %% [None]
+
+# In[19]:
+
+
 sub.to_csv('ieee_cis_fraud_detection_v2.csv', index=False)
+

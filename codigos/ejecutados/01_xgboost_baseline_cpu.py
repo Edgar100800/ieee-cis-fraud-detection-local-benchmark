@@ -1,37 +1,43 @@
-"""
-NOTEBOOK: inversion__ieee-simple-xgboost
+#!/usr/bin/env python
+# coding: utf-8
 
-SECCIONES (markdown del notebook):
+# In[1]:
 
 
-TECNICAS DETECTADAS:
-  - XGBoost (4 menciones)
-  - Label encoding (1 menciones)
-"""
-
-# %% [None]
 import numpy as np # linear algebra
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 
 import os
-print(os.listdir("../input"))
+print(os.listdir("data/raw"))
 
-# %% [None]
+
+# In[2]:
+
+
 from sklearn import preprocessing
 import xgboost as xgb
 
-# %% [None]
-train_transaction = pd.read_csv('../input/train_transaction.csv', index_col='TransactionID')
-test_transaction = pd.read_csv('../input/test_transaction.csv', index_col='TransactionID')
 
-train_identity = pd.read_csv('../input/train_identity.csv', index_col='TransactionID')
-test_identity = pd.read_csv('../input/test_identity.csv', index_col='TransactionID')
+# In[3]:
 
-sample_submission = pd.read_csv('../input/sample_submission.csv', index_col='TransactionID')
 
-# %% [None]
+train_transaction = pd.read_csv('data/raw/train_transaction.csv', index_col='TransactionID')
+test_transaction = pd.read_csv('data/raw/test_transaction.csv', index_col='TransactionID')
+
+train_identity = pd.read_csv('data/raw/train_identity.csv', index_col='TransactionID')
+test_identity = pd.read_csv('data/raw/test_identity.csv', index_col='TransactionID')
+
+sample_submission = pd.read_csv('data/raw/sample_submission.csv', index_col='TransactionID')
+
+
+# In[4]:
+
+
 train = train_transaction.merge(train_identity, how='left', left_index=True, right_index=True)
 test = test_transaction.merge(test_identity, how='left', left_index=True, right_index=True)
+
+# normaliza id-XX -> id_XX (quirk del CSV original de test_identity)
+test.columns = [c.replace('id-', 'id_') for c in test.columns]
 
 print(train.shape)
 print(test.shape)
@@ -44,19 +50,28 @@ X_test = test.copy()
 X_train = X_train.fillna(-999)
 X_test = X_test.fillna(-999)
 
-# %% [None]
+
+# In[5]:
+
+
 del train, test, train_transaction, train_identity, test_transaction, test_identity
 
-# %% [None]
+
+# In[6]:
+
+
 # Label Encoding
 for f in X_train.columns:
-    if X_train[f].dtype=='object' or X_test[f].dtype=='object': 
+    if not (pd.api.types.is_numeric_dtype(X_train[f]) and pd.api.types.is_numeric_dtype(X_test[f])):
         lbl = preprocessing.LabelEncoder()
         lbl.fit(list(X_train[f].values) + list(X_test[f].values))
         X_train[f] = lbl.transform(list(X_train[f].values))
         X_test[f] = lbl.transform(list(X_test[f].values))   
 
-# %% [None]
+
+# In[7]:
+
+
 clf = xgb.XGBClassifier(n_estimators=500,
                         n_jobs=4,
                         max_depth=9,
@@ -67,6 +82,10 @@ clf = xgb.XGBClassifier(n_estimators=500,
 
 clf.fit(X_train, y_train)
 
-# %% [None]
+
+# In[8]:
+
+
 sample_submission['isFraud'] = clf.predict_proba(X_test)[:,1]
 sample_submission.to_csv('simple_xgboost.csv')
+
