@@ -237,6 +237,48 @@ def pipeline_operativo() -> None:
     save(fig, "pipeline_operativo")
 
 
+def tradeoff_umbral() -> None:
+    df = pd.read_csv(ROOT / "results" / "threshold_metrics_xgb96.csv")
+    metrics = ["precision", "recall", "f1"]
+    labels = {"precision": "Precisión", "recall": "Recall", "f1": "F1"}
+    colors = {"precision": INK, "recall": CORAL, "f1": TEAL}
+    x = np.arange(len(df))
+    width = 0.23
+
+    fig, ax = plt.subplots(figsize=(10.8, 5.0))
+    for offset, metric in zip([-width, 0, width], metrics):
+        bars = ax.bar(x + offset, df[metric], width, color=colors[metric], label=labels[metric])
+        for bar, value in zip(bars, df[metric]):
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                value + 0.012,
+                decimal(float(value)),
+                ha="center",
+                va="bottom",
+                fontsize=11,
+                weight="bold",
+                color=colors[metric],
+            )
+    ax.set_xticks(x, ["Umbral 0,50", "Umbral 0,19"])
+    ax.set_ylim(0.40, 1.0)
+    ax.set_ylabel("valor de la métrica")
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: decimal(y, 1)))
+    ax.grid(axis="y", alpha=0.2)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.legend(frameon=False, ncol=3, loc="upper center")
+    ax.annotate(
+        "+13,3 pp de recall",
+        xy=(1, float(df.loc[1, "recall"])),
+        xytext=(0.55, 0.70),
+        arrowprops={"arrowstyle": "->", "color": CORAL, "linewidth": 1.6},
+        color=CORAL,
+        fontsize=13,
+        weight="bold",
+    )
+    fig.tight_layout()
+    save(fig, "tradeoff_umbral")
+
+
 def protocolo_temporal() -> None:
     fig, ax = plt.subplots(figsize=(13.2, 5.0))
     ax.set_xlim(0, 185)
@@ -306,6 +348,7 @@ if __name__ == "__main__":
     ablacion_uid()
     uid_diagrama()
     pipeline_operativo()
+    tradeoff_umbral()
     protocolo_temporal()
     auc_adaptativo()
     print("Figuras generadas en", FIGURES)

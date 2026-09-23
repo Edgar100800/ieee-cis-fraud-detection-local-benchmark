@@ -46,11 +46,6 @@
 \setbeamercolor{author in head/foot}{bg=white}
 \setbeamercolor{page number in head/foot}{bg=white}
 
-\title{Sistema inteligente adaptativo para detección de fraude}
-\subtitle{IEEE-CIS Fraud Detection · datos no estacionarios}
-\author{Edgar Chambilla}
-\date{Septiembre 2026}
-
 \begin{document}
 
 % 1 --------------------------------------------------------------------------
@@ -60,8 +55,8 @@
   {\color{ink}\Huge\bfseries Sistema inteligente adaptativo\\[0.15em] para detección de fraude}\\[0.45em]
   {\color{slate}\large IEEE-CIS Fraud Detection · datos no estacionarios}\\[0.15em]
   {\color{slate}Validación temporal, contexto de entidad y monitoreo operativo}
-
   \vspace{0.9em}
+
   \begin{center}
     \begin{tabular}{ccc}
       {\color{teal}\bfseries DATOS} & {\color{teal}\bfseries MODELO} & {\color{teal}\bfseries ADAPTACIÓN}\\
@@ -77,202 +72,277 @@
 \end{frame}
 
 % 2 --------------------------------------------------------------------------
-\begin{frame}{Fraude no estacionario: validar hacia el futuro}
-  \framesubtitle{El test oficial ocurre después del train; un split aleatorio no representa ese escenario}
+\begin{frame}{Qué problema resolvemos}
+  \framesubtitle{El modelo debe reconocer fraude en transacciones posteriores al período de entrenamiento}
   \begin{columns}[T]
     \begin{column}{0.34\textwidth}
-      \statcard{transacciones · fraude 1:27}{mist}{\color{ink}590\,540 \;·\; \color{coral}3,50\%}
-      \vspace{0.35em}
-      \begin{alertblock}{Riesgo metodológico}
-        \small El KFold aleatorio mezcla pasado y futuro e infla la estimación del AUC.
+      \statcard{transacciones de entrenamiento}{mist}{\color{ink}590\,540}
+      \vspace{0.25em}
+      \statcard{fraudes · desbalance 1:27}{mist}{\color{coral}3,50\%}
+      \vspace{0.4em}
+      \begin{alertblock}{Consecuencia del desbalance}
+        \small Un modelo que siempre prediga ``no fraude'' tendría accuracy alta y no detectaría ningún caso fraudulento.
       \end{alertblock}
-      \begin{block}{Pregunta del sistema}
-        \small ¿Cuánto histórico debe recordar el modelo para decidir en el siguiente bloque?
-      \end{block}
     \end{column}
-    \begin{column}{0.64\textwidth}
-      \includegraphics[width=\textwidth]{fraude_temporal.pdf}
-      \vspace{0.2em}
-
-      {\small\color{slate}La tasa diaria oscila alrededor de 3,5\% y presenta picos temporales: el rendimiento debe medirse por bloques futuros.}
+    \begin{column}{0.62\textwidth}
+      \begin{block}{Escenario del proyecto}
+        \small Cada fila combina una transacción con datos de tarjeta, dirección, identidad, monto y tiempo. El train cubre varios meses y el test ocurre después.
+      \end{block}
+      \begin{block}{Decisión que queremos tomar}
+        \small El sistema asigna un score de fraude. Ese score se convierte en una acción: aprobar, revisar o bloquear la operación.
+      \end{block}
+      \begin{block}{Pregunta de adaptación}
+        \small ¿Cuánto histórico debe conservar el modelo para mantener su rendimiento en el siguiente bloque temporal?
+      \end{block}
     \end{column}
   \end{columns}
 \end{frame}
 
 % 3 --------------------------------------------------------------------------
-\begin{frame}{La mejora dominante está en la representación}
-  \framesubtitle{El hardware acelera; reconstruir contexto de cliente eleva el AUC}
-  \begin{columns}[T]
-    \begin{column}{0.27\textwidth}
-      \statcard{mejor AUC local}{mist}{\color{teal}0,9479}
-      \vspace{0.25em}
-      \statcard{ganancia magic UID}{mist}{\color{teal}+0,0104}
-      \vspace{0.25em}
-      \statcard{aceleración GPU}{mist}{\color{ink}4,4×}
-      \vspace{0.4em}
-      {\small\color{slate}La GPU reduce tiempo; la ingeniería de entidad cambia el nivel de AUC con el mismo XGBoost d12.}
-    \end{column}
-    \begin{column}{0.71\textwidth}
-      \includegraphics[width=\textwidth]{benchmark_auc.pdf}
-    \end{column}
-  \end{columns}
+\begin{frame}{Cómo leer las métricas}
+  \framesubtitle{Cada métrica responde una pregunta distinta; el desbalance impide resumir todo con accuracy}
+  \scriptsize
+  \renewcommand{\arraystretch}{1.05}
+  \begin{tabularx}{\textwidth}{>{\bfseries\color{teal}}p{0.15\textwidth} X p{0.30\textwidth}}
+    \toprule
+    \color{ink}Término & \color{ink}\textbf{Qué significa} & \color{ink}\textbf{Cómo se lee aquí}\\
+    \midrule
+    Accuracy & Proporción total de predicciones correctas. & 0,9801 parece alto porque 96,5\% de las filas no son fraude.\\
+    Recall & De todos los fraudes reales, cuántos detecta el modelo. & 0,6082 equivale a detectar cerca de 61 fraudes por cada 100.\\
+    Precisión & De todas las alertas, cuántas corresponden a fraude. & 0,7737 equivale a 77 fraudes por cada 100 alertas.\\
+    F1 & Resume el equilibrio entre recall y precisión. & Aumentó de 0,6250 a 0,6810 al ajustar el umbral.\\
+    AUC & Evalúa si el modelo ordena los fraudes por encima de las operaciones legítimas. & 0,5 sería azar; el mejor OOF del proyecto llegó a 0,9509.\\
+    Umbral & Score mínimo a partir del cual se activa una alerta. & Bajar de 0,50 a 0,19 recuperó más fraude y redujo la precisión.\\
+    \bottomrule
+  \end{tabularx}
 \end{frame}
 
 % 4 --------------------------------------------------------------------------
-\begin{frame}{Ablación propia: el magic UID aporta señal real}
-  \framesubtitle{Notebook 05 · XGBoost d12 GPU · semilla 42 · mismo modelo y hardware}
+\begin{frame}{Términos de validación y herramientas utilizadas}
+  \framesubtitle{Las decisiones metodológicas reproducen el orden temporal del problema}
   \begin{columns}[T]
-    \begin{column}{0.29\textwidth}
-      \begin{block}{Diseño experimental}
-        \small
-        \textbf{Sin UID:} 198 features\\[0.2em]
-        \textbf{Con UID:} 245 features\\[0.2em]
-        \textbf{Holdout:} 75/25 temporal\\[0.2em]
-        \textbf{OOF:} GroupKFold mensual ×3
+    \begin{column}{0.49\textwidth}
+      \begin{block}{Validación temporal}
+        \scriptsize
+        \renewcommand{\arraystretch}{1.05}
+        \begin{tabularx}{\textwidth}{>{\bfseries\color{teal}}p{0.28\textwidth} X}
+          Holdout & Entrena con el primer 75\% y evalúa en el 25\% posterior.\\
+          OOF & Cada fila se predice con un modelo que no la usó para entrenar.\\
+          GroupKFold mensual & Mantiene cada mes completo dentro de un fold.\\
+          Ventana & Cantidad de pasado que el modelo conserva al reentrenar.\\
+          Drift & Cambio de la distribución de datos a lo largo del tiempo.\\
+          PSI & Indicador numérico de drift; se usa 0,20 como umbral de alerta.\\
+          Leakage & Uso accidental de información futura durante el entrenamiento.\\
+        \end{tabularx}
       \end{block}
-      \begin{alertblock}{Ganancia pura}
-        \small Solo cambia la representación: 
-        \textbf{+0,0116} holdout y \textbf{+0,0162} OOF.
-      \end{alertblock}
     \end{column}
-    \begin{column}{0.69\textwidth}
-      \includegraphics[width=\textwidth]{ablacion_uid.pdf}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Herramientas y motivo de uso}
+        \scriptsize
+        \renewcommand{\arraystretch}{1.08}
+        \begin{tabularx}{\textwidth}{>{\bfseries\color{teal}}p{0.27\textwidth} X}
+          pandas / NumPy & Carga, unión y transformación reproducible de los CSV.\\
+          XGBoost & Modelo tabular capaz de aprender relaciones no lineales y usar GPU.\\
+          LightGBM & Alternativa eficiente para comparar algoritmo e ingeniería de datos.\\
+          GPU & Reduce tiempo de entrenamiento; no garantiza un AUC mayor.\\
+          Magic UID & Reconstruye contexto de cliente que no existe como columna original.\\
+          PSI & Permite monitorear cambios de distribución después del despliegue.\\
+        \end{tabularx}
+      \end{block}
     \end{column}
   \end{columns}
 \end{frame}
 
 % 5 --------------------------------------------------------------------------
-\begin{frame}{El UID agrega contexto, pero nunca entra al modelo}
-  \framesubtitle{Se reconstruye un pseudo-cliente y se conserva únicamente su historial agregado}
-  \begin{center}
-    \includegraphics[width=0.96\textwidth]{uid_diagrama.pdf}
-  \end{center}
-  \vspace{-0.2em}
+\begin{frame}{La tasa de fraude cambia con el tiempo}
+  \framesubtitle{La línea representa el porcentaje diario; la referencia punteada marca la media global de 3,5\%}
   \begin{columns}[T]
-    \begin{column}{0.32\textwidth}
-      \begin{block}{1 · Reconstruir}
-        \small Tarjeta, dirección y antigüedad aproximan una entidad estable.
-      \end{block}
+    \begin{column}{0.67\textwidth}
+      \includegraphics[width=\textwidth,height=0.66\textheight,keepaspectratio]{fraude_temporal.pdf}
     \end{column}
-    \begin{column}{0.32\textwidth}
-      \begin{block}{2 · Agregar}
-        \small Frecuencia, media, dispersión y cardinalidad resumen su historial.
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Qué se observa}
+        \footnotesize La proporción diaria se mueve por encima y por debajo de la media. Algunos períodos concentran picos cercanos al 7\%.
       \end{block}
-    \end{column}
-    \begin{column}{0.32\textwidth}
-      \begin{block}{3 · Eliminar}
-        \small El identificador crudo se descarta antes de entrenar XGBoost.
-      \end{block}
+      \begin{alertblock}{Por qué importa}
+        \footnotesize Una partición aleatoria mezcla estos períodos. La evaluación por bloques conserva la dirección real del tiempo.
+      \end{alertblock}
     \end{column}
   \end{columns}
 \end{frame}
 
 % 6 --------------------------------------------------------------------------
-\begin{frame}{De score a decisión: el umbral depende del costo}
-  \framesubtitle{OOF notebook 04 · GroupKFold mensual ×6 · 590\,540 transacciones}
-  \begin{center}
-    \includegraphics[width=0.82\textwidth]{pipeline_operativo.pdf}
-  \end{center}
-  \vspace{-0.35em}
+\begin{frame}{El contexto de cliente mejora el AUC}
+  \framesubtitle{Las barras comparan modelos sobre validaciones temporales; una barra más larga indica mejor ordenamiento}
   \begin{columns}[T]
-    \begin{column}{0.55\textwidth}
-      \begin{block}{Comparación de umbrales}
-        \small
-        \begin{tabular}{@{}lrrrr@{}}
-          \toprule
-          Umbral & Accuracy & Recall & Precisión & F1\\
-          \midrule
-          0,50 & 0,9801 & 0,4751 & \textbf{0,9132} & 0,6250\\
-          0,19 & 0,9801 & \textbf{0,6082} & 0,7737 & \textbf{0,6810}\\
-          \bottomrule
-        \end{tabular}
-      \end{block}
+    \begin{column}{0.66\textwidth}
+      \includegraphics[width=\textwidth,height=0.66\textheight,keepaspectratio]{benchmark_auc.pdf}
     \end{column}
-    \begin{column}{0.41\textwidth}
-      \begin{alertblock}{Decisión recomendada}
-        \small Umbral 0,19 como punto de partida: \textbf{+13,3 pp de recall} y mayor F1. Debe recalibrarse con costos reales.
-      \end{alertblock}
+    \begin{column}{0.32\textwidth}
+      \begin{block}{Lectura de la gráfica}
+        \footnotesize La GPU redujo tiempo, pero los dos baselines quedaron cerca en AUC. El salto aparece con XGBoost d12 y aumenta al agregar historial por UID.
+      \end{block}
+      \statcard{mejor AUC local}{mist}{\color{teal}0,9479}
+      \vspace{0.2em}
+      \statcard{ganancia magic UID}{mist}{\color{teal}+0,0104}
     \end{column}
   \end{columns}
 \end{frame}
 
 % 7 --------------------------------------------------------------------------
-\begin{frame}{Protocolo causal: cada bloque usa solo el pasado}
-  \framesubtitle{Ejemplo del bloque 4: entrenamiento hasta el día 150 y evaluación en los 30 días siguientes}
-  \begin{center}
-    \includegraphics[width=0.94\textwidth]{protocolo_temporal.pdf}
-  \end{center}
-  \vspace{-0.15em}
-  \begin{block}{Regla de actualización}
-    \small PSI $>0,20$ \textbf{o} caída de AUC/recall/F1/costo $\rightarrow$ revisar la ventana y reentrenar. Sin alarma, conservar el modelo y continuar midiendo.
-  \end{block}
-\end{frame}
-
-% 8 --------------------------------------------------------------------------
-\begin{frame}{No existe una ventana dominante}
-  \framesubtitle{Corrida canónica: \texttt{results/adaptive\_results.csv} · 4 bloques · XGBoost 180 árboles}
+\begin{frame}{Ablación propia: medir el aporte del magic UID}
+  \framesubtitle{Notebook 05 · XGBoost d12 GPU · semilla 42 · mismo modelo, hardware y split}
   \begin{columns}[T]
-    \begin{column}{0.66\textwidth}
-      \includegraphics[width=\textwidth]{auc_adaptativo.pdf}
+    \begin{column}{0.64\textwidth}
+      \includegraphics[width=\textwidth,height=0.66\textheight,keepaspectratio]{ablacion_uid.pdf}
     \end{column}
-    \begin{column}{0.32\textwidth}
-      \begin{block}{Promedio por ventana}
-        \scriptsize
-        \setlength{\tabcolsep}{3pt}
-        \begin{tabular}{@{}lrrr@{}}
-          \toprule
-          Ventana & AUC & F1 & Costo\\
-          \midrule
-          Expansiva & \textbf{0,9163} & 0,5575 & 17\,435\\
-          90 días & 0,9156 & \textbf{0,5635} & \textbf{17\,336}\\
-          60 días & 0,9139 & 0,5585 & 17\,635\\
-          30 días & 0,9039 & 0,5481 & 18\,416\\
-          \bottomrule
-        \end{tabular}
+    \begin{column}{0.34\textwidth}
+      \begin{block}{Qué cambia}
+        \footnotesize El modelo base usa 198 features. Las 47 adicionales resumen el historial del pseudo-cliente; el resto del experimento permanece igual.
       \end{block}
-      \begin{alertblock}{Lectura correcta}
-        \small Expansiva gana en AUC; 90 días gana en F1 y costo. El PSI medio máximo permanece bajo 0,05: monitorear solo drift no basta.
+      \begin{block}{Resultado}
+        \footnotesize Holdout: 0,9340 $\rightarrow$ 0,9456.\\[0.1em]
+        OOF: 0,9347 $\rightarrow$ 0,9509.
+      \end{block}
+      \begin{alertblock}{Interpretación}
+        \footnotesize La mejora aparece en ambos protocolos, por lo que no depende de un solo corte temporal.
       \end{alertblock}
     \end{column}
   \end{columns}
 \end{frame}
 
+% 8 --------------------------------------------------------------------------
+\begin{frame}{Cómo se construye el magic UID}
+  \framesubtitle{El pseudo-cliente sirve para calcular historia; el identificador crudo se elimina antes de entrenar}
+  \begin{center}
+    \includegraphics[width=0.95\textwidth]{uid_diagrama.pdf}
+  \end{center}
+  \vspace{-0.25em}
+  \begin{block}{Lectura del flujo}
+    \small \texttt{card1+addr1} aproxima tarjeta y dirección; \texttt{floor(day-D1)} aproxima la fecha de alta. Las agregaciones permiten comparar una transacción con el comportamiento previo de su grupo.
+  \end{block}
+\end{frame}
+
 % 9 --------------------------------------------------------------------------
+\begin{frame}{Del score a una decisión que puede auditarse}
+  \framesubtitle{El modelo produce un score; el umbral y el monitoreo determinan la acción}
+  \begin{center}
+    \includegraphics[width=0.88\textwidth,height=0.47\textheight,keepaspectratio]{pipeline_operativo.pdf}
+  \end{center}
+  \vspace{-0.2em}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Durante la predicción}
+        \small XGBoost combina las features y entrega un score. El umbral traduce ese valor en aprobar, revisar o bloquear.
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Después de la predicción}
+        \small Recall, F1, AUC, PSI y costo se calculan por bloque. Una degradación sostenida activa la revisión de ventana y el reentrenamiento.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 10 -------------------------------------------------------------------------
+\begin{frame}{El umbral 0,19 recupera más fraude}
+  \framesubtitle{OOF notebook 04 · GroupKFold mensual ×6 · 590\,540 transacciones}
+  \begin{columns}[T]
+    \begin{column}{0.64\textwidth}
+      \includegraphics[width=\textwidth,height=0.66\textheight,keepaspectratio]{tradeoff_umbral.pdf}
+    \end{column}
+    \begin{column}{0.34\textwidth}
+      \begin{block}{Umbral 0,50}
+        \footnotesize Detecta 47,51 de cada 100 fraudes. De cada 100 alertas, 91,32 corresponden a fraude.
+      \end{block}
+      \begin{block}{Umbral 0,19}
+        \footnotesize Detecta 60,82 de cada 100 fraudes. La precisión baja a 77,37 alertas correctas por cada 100.
+      \end{block}
+      \begin{alertblock}{Balance obtenido}
+        \footnotesize F1 sube de 0,6250 a 0,6810. Accuracy permanece en 0,9801 y no refleja el cambio.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 11 -------------------------------------------------------------------------
+\begin{frame}{Cada bloque futuro usa únicamente información pasada}
+  \framesubtitle{Ejemplo del bloque 4: entrenamiento hasta el día 150 y evaluación en los 30 días siguientes}
+  \begin{center}
+    \includegraphics[width=0.88\textwidth,height=0.55\textheight,keepaspectratio]{protocolo_temporal.pdf}
+  \end{center}
+  \vspace{-0.2em}
+  \begin{block}{Cómo leer la línea de tiempo}
+    \small Las barras muestran cuánto pasado conserva cada estrategia. La zona rosada queda fuera del entrenamiento. La ventana expansiva acumula todo el historial; las ventanas móviles descartan datos antiguos.
+  \end{block}
+\end{frame}
+
+% 12 -------------------------------------------------------------------------
+\begin{frame}{Las ventanas responden a objetivos distintos}
+  \framesubtitle{Corrida canónica: \texttt{results/adaptive\_results.csv} · 4 bloques · XGBoost 180 árboles}
+  \begin{columns}[T]
+    \begin{column}{0.59\textwidth}
+      \includegraphics[width=\textwidth,height=0.65\textheight,keepaspectratio]{auc_adaptativo.pdf}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \begin{block}{Promedios por ventana}
+        \scriptsize
+        \setlength{\tabcolsep}{3pt}
+        \begin{tabular}{@{}lrrr@{}}
+          \toprule
+          Ventana & AUC & Recall & F1\\
+          \midrule
+          Expansiva & \textbf{0,9163} & 0,5131 & 0,5575\\
+          90 días & 0,9156 & \textbf{0,5151} & \textbf{0,5635}\\
+          60 días & 0,9139 & 0,5045 & 0,5585\\
+          30 días & 0,9039 & 0,4786 & 0,5481\\
+          \bottomrule
+        \end{tabular}
+      \end{block}
+      \begin{alertblock}{Lectura y monitoreo}
+        \scriptsize Expansiva obtiene el mejor AUC. La ventana de 90 días logra el mejor recall, F1 y costo medio (17\,336).\\[0.3em]
+        El PSI medio máximo queda bajo 0,05, lejos del umbral 0,20. La caída del bloque 2 exige vigilar también desempeño y costo.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 13 -------------------------------------------------------------------------
 \begin{frame}{Recomendación operativa}
-  \framesubtitle{La política depende del objetivo de decisión, no de una única métrica}
+  \framesubtitle{La política se elige según el costo de cada error y la métrica que se desea proteger}
   \vspace{0.25em}
   \begin{center}
     \colorbox{mist}{\parbox{0.90\textwidth}{\centering
-      \color{ink}\Large\bfseries Magic UID causal + ventana seleccionada por objetivo + umbral calibrado por costo}}
+      \color{ink}\Large\bfseries Magic UID causal + ventana por objetivo + umbral calibrado por costo}}
   \end{center}
   \vspace{0.55em}
   \begin{columns}[T]
     \begin{column}{0.31\textwidth}
       \begin{block}{Representación}
-        \small Usar agregaciones por pseudo-cliente: aportaron \textbf{+0,0116} holdout y \textbf{+0,0162} OOF.
+        \small Usar agregaciones por pseudo-cliente. Aportaron +0,0116 AUC en holdout y +0,0162 en OOF.
       \end{block}
     \end{column}
     \begin{column}{0.31\textwidth}
-      \begin{block}{Ventana}
-        \small \textbf{Expansiva} si se prioriza AUC; \textbf{90 días} si se prioriza F1 y costo.
+      \begin{block}{Memoria temporal}
+        \small Usar expansiva si se prioriza AUC y 90 días si se priorizan recall, F1 y costo.
       \end{block}
     \end{column}
     \begin{column}{0.31\textwidth}
       \begin{block}{Decisión}
-        \small Iniciar en umbral \textbf{0,19}; monitorear recall, F1, AUC, PSI y costo por bloque.
+        \small Iniciar con umbral 0,19 y recalibrarlo cuando cambien los costos o el comportamiento del fraude.
       \end{block}
     \end{column}
   \end{columns}
   \vspace{0.55em}
-  \begin{alertblock}{Siguiente paso}
-    \centering Validar la política con costos reales de falso positivo/falso negativo y un bloque externo posterior.
+  \begin{alertblock}{Siguiente evaluación}
+    \centering Probar la política con costos reales de falsos positivos y falsos negativos en un bloque posterior no utilizado durante el desarrollo.
   \end{alertblock}
 \end{frame}
 
-% 10 -------------------------------------------------------------------------
+% 14 -------------------------------------------------------------------------
 \appendix
 \begin{frame}{Apéndice · reproducibilidad}
-  \framesubtitle{Semillas, fuentes de datos y artefactos ejecutables}
+  \framesubtitle{Semillas, hardware, fuentes de datos y artefactos ejecutables}
   \begin{columns}[T]
     \begin{column}{0.47\textwidth}
       \begin{block}{Semillas}

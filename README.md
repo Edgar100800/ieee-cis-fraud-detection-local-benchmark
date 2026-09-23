@@ -93,7 +93,7 @@ cd informe_latex && tectonic main.tex
 # 6. presentación Beamer (figuras 16:9 + PDF)
 .venv/bin/python presentacion/generar_figuras.py
 (cd presentacion && tectonic planifica_presentacion.tex)
-# salida: presentacion/planifica_presentacion.pdf (10 páginas, 9 + apéndice)
+# salida: presentacion/planifica_presentacion.pdf (14 páginas, 13 + apéndice)
 ```
 
 Los gráficos del informe se regeneran desde `data/raw` y `results/`: si cambias los
